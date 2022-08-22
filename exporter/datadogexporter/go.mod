@@ -4,8 +4,8 @@ go 1.17
 
 require (
 	github.com/DataDog/agent-payload/v5 v5.0.22
-	github.com/DataDog/datadog-agent/pkg/otlp/model v0.38.0-rc.1
-	github.com/DataDog/datadog-agent/pkg/quantile v0.38.0-rc.1
+	github.com/DataDog/datadog-agent/pkg/otlp/model v0.39.0-rc.5
+	github.com/DataDog/datadog-agent/pkg/quantile v0.39.0-rc.5
 	github.com/DataDog/datadog-agent/pkg/trace v0.38.0-rc.1
 	github.com/DataDog/sketches-go v1.4.1
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/detectors/gcp v0.32.2
@@ -16,10 +16,10 @@ require (
 	github.com/open-telemetry/opentelemetry-collector-contrib/internal/metadataproviders v0.54.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/resourcetotelemetry v0.54.0
 	github.com/patrickmn/go-cache v2.1.0+incompatible
-	github.com/stretchr/testify v1.7.5
+	github.com/stretchr/testify v1.8.0
 	go.opentelemetry.io/collector v0.54.0
-	go.opentelemetry.io/collector/pdata v0.54.0
-	go.opentelemetry.io/collector/semconv v0.54.0
+	go.opentelemetry.io/collector/pdata v0.56.0
+	go.opentelemetry.io/collector/semconv v0.56.0
 	go.uber.org/multierr v1.8.0
 	go.uber.org/zap v1.21.0
 	gopkg.in/zorkian/go-datadog-api.v2 v2.30.0
@@ -100,7 +100,7 @@ require (
 	golang.org/x/time v0.0.0-20220411224347-583f2d630306 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20220421151946-72621c1f0bd3 // indirect
-	google.golang.org/grpc v1.47.0 // indirect
+	google.golang.org/grpc v1.48.0 // indirect
 	google.golang.org/protobuf v1.28.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
