@@ -3,17 +3,17 @@ module github.com/open-telemetry/opentelemetry-collector-contrib/receiver/google
 go 1.18
 
 require (
-	cloud.google.com/go/spanner v1.36.0
+	cloud.google.com/go/spanner v1.39.0
 	github.com/stretchr/testify v1.8.0
 	go.opentelemetry.io/collector v0.58.1-0.20220825025657-e092fc728b72
 	go.uber.org/zap v1.23.0
-	google.golang.org/api v0.94.0
+	google.golang.org/api v0.96.0
 	gopkg.in/yaml.v3 v3.0.1
 
 )
 
 require (
-	google.golang.org/genproto v0.0.0-20220804142021-4e6b2dfa6612
+	google.golang.org/genproto v0.0.0-20220916134934-764224ccc2d1
 	google.golang.org/grpc v1.49.0
 )
 
@@ -58,8 +58,8 @@ require (
 	go.opentelemetry.io/otel/trace v1.9.0 // indirect
 	go.uber.org/atomic v1.10.0 // indirect
 	go.uber.org/multierr v1.8.0 // indirect
-	golang.org/x/net v0.0.0-20220624214902-1bab6f366d9e // indirect
-	golang.org/x/oauth2 v0.0.0-20220822191816-0ebed06d0094 // indirect
+	golang.org/x/net v0.0.0-20220909164309-bea034e7d591 // indirect
+	golang.org/x/oauth2 v0.0.0-20220909003341-f21342109be1 // indirect
 	golang.org/x/sync v0.0.0-20220601150217-0de741cfad7f // indirect
 	golang.org/x/sys v0.0.0-20220808155132-1c4a2a72c664 // indirect
 	golang.org/x/text v0.3.7 // indirect
