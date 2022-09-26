@@ -13,7 +13,7 @@ require (
 	go.opentelemetry.io/collector v0.58.1-0.20220825025657-e092fc728b72
 	go.opentelemetry.io/collector/pdata v0.58.1-0.20220825025657-e092fc728b72
 	go.opentelemetry.io/collector/semconv v0.58.1-0.20220825025657-e092fc728b72
-	google.golang.org/api v0.94.0
+	google.golang.org/api v0.97.0
 	google.golang.org/genproto v0.0.0-20220804142021-4e6b2dfa6612
 	google.golang.org/grpc v1.49.0
 	google.golang.org/protobuf v1.28.1
@@ -57,7 +57,7 @@ require (
 	go.uber.org/atomic v1.10.0 // indirect
 	go.uber.org/multierr v1.8.0 // indirect
 	go.uber.org/zap v1.23.0 // indirect
-	golang.org/x/net v0.0.0-20220624214902-1bab6f366d9e // indirect
+	golang.org/x/net v0.0.0-20220909164309-bea034e7d591 // indirect
 	golang.org/x/oauth2 v0.0.0-20220822191816-0ebed06d0094 // indirect
 	golang.org/x/sync v0.0.0-20220601150217-0de741cfad7f // indirect
 	golang.org/x/sys v0.0.0-20220808155132-1c4a2a72c664 // indirect
