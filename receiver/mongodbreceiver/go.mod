@@ -13,7 +13,7 @@ require (
 	github.com/open-telemetry/opentelemetry-collector-contrib/internal/scrapertest v0.62.0
 	github.com/testcontainers/testcontainers-go v0.14.0
 	go.mongodb.org/mongo-driver v1.10.3
-	go.opentelemetry.io/collector/pdata v0.62.0
+	go.opentelemetry.io/collector/pdata v0.62.1
 	go.uber.org/zap v1.23.0
 )
 
