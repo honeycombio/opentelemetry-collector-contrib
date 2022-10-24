@@ -47,7 +47,7 @@ require (
 
 require (
 	github.com/open-telemetry/opentelemetry-collector-contrib/internal/common v0.62.0
-	go.opentelemetry.io/collector/pdata v0.62.0
+	go.opentelemetry.io/collector/pdata v0.62.1
 	go.opentelemetry.io/otel/sdk v1.10.0 // indirect
 )
 
