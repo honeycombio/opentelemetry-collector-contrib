@@ -13,7 +13,7 @@ require (
 	github.com/jaegertracing/jaeger v1.38.1
 	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/jaeger v0.62.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/zipkin v0.62.0
-	github.com/stretchr/testify v1.8.0
+	github.com/stretchr/testify v1.8.1
 	go.opentelemetry.io/collector v0.62.0
 	go.opentelemetry.io/collector/pdata v0.62.0
 	go.uber.org/multierr v1.8.0
