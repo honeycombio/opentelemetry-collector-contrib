@@ -11,7 +11,7 @@ require (
 	github.com/sijms/go-ora/v2 v2.5.3
 	github.com/snowflakedb/gosnowflake v1.6.13
 	github.com/stretchr/testify v1.8.0
-	github.com/testcontainers/testcontainers-go v0.14.0
+	github.com/testcontainers/testcontainers-go v0.15.0
 	go.opentelemetry.io/collector v0.62.0
 	go.opentelemetry.io/collector/pdata v0.62.0
 	go.opentelemetry.io/otel/trace v1.10.0
