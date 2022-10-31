@@ -13,7 +13,7 @@ require github.com/stretchr/testify v1.8.1
 require (
 	github.com/open-telemetry/opentelemetry-collector-contrib/internal/scrapertest v0.63.0
 	github.com/testcontainers/testcontainers-go v0.15.0
-	go.opentelemetry.io/collector/pdata v0.63.0
+	go.opentelemetry.io/collector/pdata v0.63.1
 )
 
 require (
