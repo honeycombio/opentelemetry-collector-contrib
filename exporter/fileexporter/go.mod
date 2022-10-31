@@ -8,7 +8,7 @@ require (
 	github.com/open-telemetry/opentelemetry-collector-contrib/internal/sharedcomponent v0.63.0
 	github.com/stretchr/testify v1.8.1
 	go.opentelemetry.io/collector v0.63.0
-	go.opentelemetry.io/collector/pdata v0.63.0
+	go.opentelemetry.io/collector/pdata v0.63.1
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 )
 
