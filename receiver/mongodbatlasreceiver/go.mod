@@ -5,7 +5,7 @@ go 1.18
 require (
 	github.com/cenkalti/backoff/v4 v4.1.3
 	github.com/mongodb-forks/digest v1.0.4
-	go.mongodb.org/atlas v0.18.0
+	go.mongodb.org/atlas v0.19.0
 	go.opentelemetry.io/collector v0.63.0
 	go.uber.org/zap v1.23.0
 )
@@ -29,7 +29,7 @@ require (
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/observiq/ctimefmt v1.0.0 // indirect
-	github.com/openlyinc/pointy v1.1.2 // indirect
+	github.com/openlyinc/pointy v1.2.0 // indirect
 	github.com/pelletier/go-toml v1.9.4 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/stretchr/objx v0.5.0 // indirect
