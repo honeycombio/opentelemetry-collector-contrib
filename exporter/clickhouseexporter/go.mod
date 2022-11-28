@@ -13,7 +13,7 @@ require go.uber.org/multierr v1.8.0
 require (
 	github.com/ClickHouse/clickhouse-go/v2 v2.3.0
 	github.com/stretchr/testify v1.8.1
-	go.opentelemetry.io/collector/pdata v0.63.0
+	go.opentelemetry.io/collector/pdata v0.66.0
 	go.opentelemetry.io/collector/semconv v0.63.0
 )
 
@@ -53,11 +53,11 @@ require (
 	go.opentelemetry.io/otel/sdk v1.11.1 // indirect
 	go.opentelemetry.io/otel/trace v1.11.1 // indirect
 	go.uber.org/atomic v1.10.0 // indirect
-	golang.org/x/net v0.0.0-20220225172249-27dd8689420f // indirect
-	golang.org/x/sys v0.0.0-20220919091848-fb04ddd9f9c8 // indirect
+	golang.org/x/net v0.0.0-20220722155237-a158d28d115b // indirect
+	golang.org/x/sys v0.2.0 // indirect
 	golang.org/x/text v0.4.0 // indirect
 	google.golang.org/genproto v0.0.0-20211208223120-3a66f561d7aa // indirect
-	google.golang.org/grpc v1.50.1 // indirect
+	google.golang.org/grpc v1.51.0 // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
