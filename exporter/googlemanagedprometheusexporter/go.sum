@@ -56,8 +56,8 @@ github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03
 github.com/BurntSushi/xgb v0.0.0-20160522181843-27f122750802/go.mod h1:IVnqGOEym/WlBOVXweHU+Q+/VP0lqqI8lqeDx9IjBqo=
 github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/collector v0.34.1 h1:qXN4o1+RWbfLZanP6zFCzzfiKwgstKzobaXkQRAxeAk=
 github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/collector v0.34.1/go.mod h1:KGxTw4iYuQBtmGGZpcqC2SEw+fRdcR8PxpUb+aEczQ8=
-github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/collector/googlemanagedprometheus v0.34.1 h1:O89aZCuqbyM1EB3XQkiyoeUXfGKsiEUwj7RyIGhH4uc=
-github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/collector/googlemanagedprometheus v0.34.1/go.mod h1:AWHL23liZLi/Ljw5XqFHyX/vloKqPodLx7Um4UKXisI=
+github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/collector/googlemanagedprometheus v0.34.2 h1:0WbyP5GfXxWvhoQVL7U4YouxQRrIRp6MEwcxxCIEGR0=
+github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/collector/googlemanagedprometheus v0.34.2/go.mod h1:NW+a69oLVqYvWZ98nlUPI/TqsOA/YRdOokzQVGNOxc4=
 github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/trace v1.10.1 h1:E0Hwk1YC0lWXJboAvQrOnDSyVpmdlqC2v4m+GNmNszA=
 github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/trace v1.10.1/go.mod h1:ZWWusXNLjdTConvbpJZf+/5xxtLfu7y3hRfKjmb/DOI=
 github.com/GoogleCloudPlatform/opentelemetry-operations-go/internal/cloudmock v0.34.1 h1:2G1eO4RSvcTNncDivyGTd3Zh9tozmMeA2JpF07QEYlc=
@@ -564,8 +564,8 @@ golang.org/x/net v0.0.0-20210503060351-7fd8e65b6420/go.mod h1:9nx3DQGgdP8bBQD5qx
 golang.org/x/net v0.0.0-20210525063256-abc453219eb5/go.mod h1:9nx3DQGgdP8bBQD5qxJ1jj9UTztislL4KSBs9R2vV5Y=
 golang.org/x/net v0.0.0-20220127200216-cd36cc0744dd/go.mod h1:CfG3xpIq0wQ8r1q4Su4UZFWDARRcnwPjda9FqA0JpMk=
 golang.org/x/net v0.0.0-20220225172249-27dd8689420f/go.mod h1:CfG3xpIq0wQ8r1q4Su4UZFWDARRcnwPjda9FqA0JpMk=
-golang.org/x/net v0.0.0-20221014081412-f15817d10f9b h1:tvrvnPFcdzp294diPnrdZZZ8XUt2Tyj7svb7X52iDuU=
-golang.org/x/net v0.0.0-20221014081412-f15817d10f9b/go.mod h1:YDH+HFinaLZZlnHAfSS6ZXJJ9M9t4Dl22yv3iI2vPwk=
+golang.org/x/net v0.0.0-20221017152216-f25eb7ecb193 h1:3Moaxt4TfzNcQH6DWvlYKraN1ozhBXQHcgvXjRGeim0=
+golang.org/x/net v0.0.0-20221017152216-f25eb7ecb193/go.mod h1:RpDiru2p0u2F0lLpEoqnP2+7xs0ifAuOcJ442g6GU2s=
 golang.org/x/oauth2 v0.0.0-20180821212333-d2e6202438be/go.mod h1:N/0e6XlmueqKjAGxoOufVs8QHGRruUQn6yWY3a++T0U=
 golang.org/x/oauth2 v0.0.0-20190226205417-e64efc72b421/go.mod h1:gOpvHmFTYa4IltrdGE7lF6nIHvwfUNPOp7c8zoXwtLw=
 golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45/go.mod h1:gOpvHmFTYa4IltrdGE7lF6nIHvwfUNPOp7c8zoXwtLw=
