@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/collector v0.34.1
-	github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/collector/googlemanagedprometheus v0.34.1
+	github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/collector/googlemanagedprometheus v0.34.2
 	github.com/stretchr/testify v1.8.1
 	go.opentelemetry.io/collector v0.66.1-0.20221128222955-4ff1ff379b90
 	go.opentelemetry.io/collector/component v0.66.1-0.20221128222955-4ff1ff379b90
@@ -76,7 +76,7 @@ require (
 	go.uber.org/atomic v1.10.0 // indirect
 	go.uber.org/multierr v1.8.0 // indirect
 	go.uber.org/zap v1.23.0 // indirect
-	golang.org/x/net v0.0.0-20221014081412-f15817d10f9b // indirect
+	golang.org/x/net v0.0.0-20221017152216-f25eb7ecb193 // indirect
 	golang.org/x/oauth2 v0.0.0-20221014153046-6fdb5e3db783 // indirect
 	golang.org/x/sync v0.1.0 // indirect
 	golang.org/x/sys v0.2.0 // indirect
