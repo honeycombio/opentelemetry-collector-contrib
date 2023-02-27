@@ -263,8 +263,8 @@ go.opentelemetry.io/collector/component v0.66.1-0.20221128222955-4ff1ff379b90 h1
 go.opentelemetry.io/collector/component v0.66.1-0.20221128222955-4ff1ff379b90/go.mod h1:0c84EqXUhvYe6KW7hJfh76tiI/5yjWCH2amwyQ06XLM=
 go.opentelemetry.io/collector/consumer v0.66.1-0.20221128222955-4ff1ff379b90 h1:nzNXVfC1FzXBXCLMzbMv+qK3E4EGiNsnMhfVsBd2yzc=
 go.opentelemetry.io/collector/consumer v0.66.1-0.20221128222955-4ff1ff379b90/go.mod h1:WtoRZa5SnxQO1ZEQdVxYpFcXCmq62rakv0oUSlPO0NQ=
-go.opentelemetry.io/collector/featuregate v0.66.1-0.20221128222955-4ff1ff379b90 h1:UuJSFWbi9XxyNZsJKZuvpWg35BgRbcCGFH+38V2MAdw=
-go.opentelemetry.io/collector/featuregate v0.66.1-0.20221128222955-4ff1ff379b90/go.mod h1:tewuFKJYalWBU0bmNKg++MC1ipINXUr6szYzOw2p1GI=
+go.opentelemetry.io/collector/featuregate v0.72.0 h1:ohUu+sefEWa1VGgzTu40xJhfHp+FJOUiQVPRv6IWco0=
+go.opentelemetry.io/collector/featuregate v0.72.0/go.mod h1:6mZdaoUukhcreY8fZKwnTm7RVsyp4iFFNf5UXMnzIxc=
 go.opentelemetry.io/collector/pdata v0.66.1-0.20221128222955-4ff1ff379b90 h1:Vu4S4jSNcd0VFPzxQNO4+UqGwnes1xJDoFLPRiWHm8I=
 go.opentelemetry.io/collector/pdata v0.66.1-0.20221128222955-4ff1ff379b90/go.mod h1:pqyaznLzk21m+1KL6fwOsRryRELL+zNM0qiVSn0MbVc=
 go.opentelemetry.io/otel v1.11.1 h1:4WLLAmcfkmDk2ukNXJyq3/kiz/3UzCaYq6PskJsaou4=
