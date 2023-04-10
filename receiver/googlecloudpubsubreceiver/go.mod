@@ -3,7 +3,7 @@ module github.com/open-telemetry/opentelemetry-collector-contrib/receiver/google
 go 1.18
 
 require (
-	cloud.google.com/go/pubsub v1.26.0
+	cloud.google.com/go/pubsub v1.27.1
 	github.com/stretchr/testify v1.8.1
 	go.opentelemetry.io/collector v0.66.1-0.20221128222955-4ff1ff379b90
 	go.opentelemetry.io/collector/component v0.66.1-0.20221128222955-4ff1ff379b90
@@ -12,15 +12,15 @@ require (
 	go.uber.org/atomic v1.10.0
 	go.uber.org/zap v1.23.0
 	google.golang.org/api v0.103.0
-	google.golang.org/genproto v0.0.0-20221027153422-115e99e71e1c
-	google.golang.org/grpc v1.51.0
+	google.golang.org/genproto v0.0.0-20230110181048-76db0878b65f
+	google.golang.org/grpc v1.54.0
 )
 
 require (
-	cloud.google.com/go v0.105.0 // indirect
-	cloud.google.com/go/compute v1.12.1 // indirect
-	cloud.google.com/go/compute/metadata v0.2.1 // indirect
-	cloud.google.com/go/iam v0.6.0 // indirect
+	cloud.google.com/go v0.107.0 // indirect
+	cloud.google.com/go/compute v1.15.1 // indirect
+	cloud.google.com/go/compute/metadata v0.2.3 // indirect
+	cloud.google.com/go/iam v0.8.0 // indirect
 	github.com/benbjohnson/clock v1.3.0 // indirect
 	github.com/cenkalti/backoff/v4 v4.2.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
@@ -47,10 +47,10 @@ require (
 	go.opentelemetry.io/otel/metric v0.33.0 // indirect
 	go.opentelemetry.io/otel/trace v1.11.1 // indirect
 	go.uber.org/multierr v1.8.0 // indirect
-	golang.org/x/net v0.0.0-20221014081412-f15817d10f9b // indirect
-	golang.org/x/oauth2 v0.0.0-20221014153046-6fdb5e3db783 // indirect
-	golang.org/x/sys v0.2.0 // indirect
-	golang.org/x/text v0.4.0 // indirect
+	golang.org/x/net v0.8.0 // indirect
+	golang.org/x/oauth2 v0.4.0 // indirect
+	golang.org/x/sys v0.6.0 // indirect
+	golang.org/x/text v0.8.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
