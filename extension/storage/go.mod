@@ -5,7 +5,7 @@ go 1.18
 require (
 	github.com/jackc/pgx/v4 v4.17.2
 	github.com/mattn/go-sqlite3 v2.0.3+incompatible
-	github.com/stretchr/testify v1.8.1
+	github.com/stretchr/testify v1.8.4
 	go.etcd.io/bbolt v1.3.6
 	go.opentelemetry.io/collector v0.66.1-0.20221128222955-4ff1ff379b90
 	go.opentelemetry.io/collector/component v0.66.1-0.20221128222955-4ff1ff379b90
