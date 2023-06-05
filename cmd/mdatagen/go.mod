@@ -6,7 +6,7 @@ require (
 	github.com/go-playground/locales v0.14.0
 	github.com/go-playground/universal-translator v0.18.0
 	github.com/go-playground/validator/v10 v10.11.1
-	github.com/stretchr/testify v1.8.1
+	github.com/stretchr/testify v1.8.4
 	go.opentelemetry.io/collector v0.66.1-0.20221128222955-4ff1ff379b90
 	go.opentelemetry.io/collector/pdata v0.66.1-0.20221128222955-4ff1ff379b90
 )
