@@ -8,12 +8,12 @@ require (
 	github.com/open-telemetry/opentelemetry-collector-contrib/extension/observer v0.66.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/opencensus v0.66.0
 	github.com/spf13/cast v1.5.0
-	github.com/stretchr/testify v1.8.1
+	github.com/stretchr/testify v1.8.4
 	go.opentelemetry.io/collector v0.66.1-0.20221128222955-4ff1ff379b90
 	go.opentelemetry.io/collector/component v0.66.1-0.20221128222955-4ff1ff379b90
 	go.opentelemetry.io/collector/consumer v0.66.1-0.20221128222955-4ff1ff379b90
 	go.opentelemetry.io/collector/pdata v0.66.1-0.20221128222955-4ff1ff379b90
-	go.opentelemetry.io/collector/semconv v0.66.1-0.20221128222955-4ff1ff379b90
+	go.opentelemetry.io/collector/semconv v0.81.0
 	go.uber.org/multierr v1.8.0
 	go.uber.org/zap v1.23.0
 )
