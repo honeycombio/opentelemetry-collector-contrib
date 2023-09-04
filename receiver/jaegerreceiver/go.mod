@@ -3,7 +3,7 @@ module github.com/open-telemetry/opentelemetry-collector-contrib/receiver/jaeger
 go 1.18
 
 require (
-	github.com/apache/thrift v0.17.0
+	github.com/apache/thrift v0.19.0
 	github.com/gorilla/mux v1.8.0
 	github.com/jaegertracing/jaeger v1.39.1-0.20221110195127-14c11365a856
 	github.com/open-telemetry/opentelemetry-collector-contrib/internal/common v0.66.0
