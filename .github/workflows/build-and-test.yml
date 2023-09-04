@@ -27,7 +27,7 @@ jobs:
         with:
           api_key: ${{ secrets.FORESIGHT_API_KEY }}
       - name: Checkout Repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Setup Go
         uses: actions/setup-go@v3
         with:
@@ -51,7 +51,7 @@ jobs:
     needs: [setup-environment]
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       - name: Check Collector Module Version
         run: ./.github/workflows/scripts/check-collector-module-version.sh
   check-codeowners:
@@ -59,7 +59,7 @@ jobs:
     needs: [setup-environment]
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       - name: Check Code Owner Existence
         run: ./.github/workflows/scripts/check-codeowners.sh check_code_owner_existence
       - name: Check Component Existence
@@ -86,7 +86,7 @@ jobs:
         with:
           api_key: ${{ secrets.FORESIGHT_API_KEY }}
       - name: Checkout Repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Setup Go
         uses: actions/setup-go@v3
         with:
@@ -138,7 +138,7 @@ jobs:
         with:
           api_key: ${{ secrets.FORESIGHT_API_KEY }}
       - name: Checkout Repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Setup Go
         uses: actions/setup-go@v3
         with:
@@ -201,7 +201,7 @@ jobs:
         with:
           api_key: ${{ secrets.FORESIGHT_API_KEY }}
       - name: Checkout Repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Setup Go
         uses: actions/setup-go@v3
         with:
@@ -266,7 +266,7 @@ jobs:
         with:
           api_key: ${{ secrets.FORESIGHT_API_KEY }}
       - name: Checkout Repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Setup Go
         uses: actions/setup-go@v3
         with:
@@ -304,7 +304,7 @@ jobs:
         with:
           api_key: ${{ secrets.FORESIGHT_API_KEY }}
       - name: Checkout Repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Setup Go
         uses: actions/setup-go@v3
         with:
@@ -344,7 +344,7 @@ jobs:
         with:
           api_key: ${{ secrets.FORESIGHT_API_KEY }}
       - name: Checkout Repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Setup Go
         uses: actions/setup-go@v3
         with:
@@ -385,7 +385,7 @@ jobs:
         with:
           api_key: ${{ secrets.FORESIGHT_API_KEY }}
       - name: Checkout Repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Build Examples
         run: make build-examples
 
@@ -424,7 +424,7 @@ jobs:
         with:
           api_key: ${{ secrets.FORESIGHT_API_KEY }}
       - name: Checkout Repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Setup Go
         uses: actions/setup-go@v3
         with:
@@ -466,7 +466,7 @@ jobs:
         with:
           api_key: ${{ secrets.FORESIGHT_API_KEY }}
       - name: Checkout Repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - name: Install Ruby
@@ -513,7 +513,7 @@ jobs:
         with:
           api_key: ${{ secrets.FORESIGHT_API_KEY }}
       - name: Checkout Repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - name: Download Binaries
@@ -554,7 +554,7 @@ jobs:
         with:
           api_key: ${{ secrets.FORESIGHT_API_KEY }}
       - name: Checkout Repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Download Binaries
         uses: actions/download-artifact@v3
         with:
@@ -578,7 +578,7 @@ jobs:
         with:
           api_key: ${{ secrets.FORESIGHT_API_KEY }}
       - name: Checkout Repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Setup Go
         uses: actions/setup-go@v3
         with:
@@ -648,7 +648,7 @@ jobs:
         with:
           api_key: ${{ secrets.FORESIGHT_API_KEY }}
       - name: Checkout Repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Setup Go
         uses: actions/setup-go@v3
         with:
