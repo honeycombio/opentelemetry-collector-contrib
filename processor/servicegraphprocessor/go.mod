@@ -11,13 +11,12 @@ require (
 	go.opentelemetry.io/collector/exporter/otlpexporter v0.66.1-0.20221128222955-4ff1ff379b90
 	go.opentelemetry.io/collector/pdata v0.66.1-0.20221128222955-4ff1ff379b90
 	go.opentelemetry.io/collector/semconv v0.66.1-0.20221128222955-4ff1ff379b90
-	go.uber.org/zap v1.23.0
+	go.uber.org/zap v1.26.0
 )
 
 require (
 	cloud.google.com/go/compute v1.10.0 // indirect
 	contrib.go.opencensus.io/exporter/prometheus v0.4.2 // indirect
-	github.com/benbjohnson/clock v1.3.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cenkalti/backoff/v4 v4.2.0 // indirect
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
@@ -71,8 +70,7 @@ require (
 	go.opentelemetry.io/otel/sdk/metric v0.33.0 // indirect
 	go.opentelemetry.io/otel/trace v1.11.1 // indirect
 	go.uber.org/atomic v1.10.0 // indirect
-	go.uber.org/goleak v1.2.0 // indirect
-	go.uber.org/multierr v1.8.0 // indirect
+	go.uber.org/multierr v1.10.0 // indirect
 	golang.org/x/net v0.0.0-20220909164309-bea034e7d591 // indirect
 	golang.org/x/oauth2 v0.0.0-20220909003341-f21342109be1 // indirect
 	golang.org/x/sys v0.2.0 // indirect
