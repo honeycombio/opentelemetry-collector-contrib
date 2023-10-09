@@ -141,7 +141,7 @@ require (
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/riakreceiver v0.66.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/saphanareceiver v0.66.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/sapmreceiver v0.66.0
-	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/signalfxreceiver v0.66.0
+	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/signalfxreceiver v0.0.0-00010101000000-000000000000
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/simpleprometheusreceiver v0.66.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/skywalkingreceiver v0.66.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/snmpreceiver v0.66.0
@@ -174,7 +174,7 @@ require (
 	go.opentelemetry.io/collector/processor/memorylimiterprocessor v0.66.1-0.20221128222955-4ff1ff379b90
 	go.opentelemetry.io/collector/receiver/otlpreceiver v0.66.1-0.20221128222955-4ff1ff379b90
 	go.uber.org/multierr v1.8.0
-	golang.org/x/sys v0.2.0
+	golang.org/x/sys v0.13.0
 )
 
 require (
