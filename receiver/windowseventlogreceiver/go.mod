@@ -8,7 +8,7 @@ require (
 	go.opentelemetry.io/collector v0.66.1-0.20221128222955-4ff1ff379b90
 	go.opentelemetry.io/collector/component v0.66.1-0.20221128222955-4ff1ff379b90
 	go.opentelemetry.io/collector/consumer v0.66.1-0.20221128222955-4ff1ff379b90
-	golang.org/x/sys v0.2.0
+	golang.org/x/sys v0.14.0
 )
 
 require (
