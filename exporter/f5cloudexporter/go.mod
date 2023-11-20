@@ -13,7 +13,7 @@ require (
 	go.opentelemetry.io/collector/exporter v0.88.1-0.20231026220224-6405e152a2d9
 	go.opentelemetry.io/collector/exporter/otlphttpexporter v0.88.1-0.20231026220224-6405e152a2d9
 	golang.org/x/oauth2 v0.13.0
-	google.golang.org/api v0.150.0
+	google.golang.org/api v0.151.0
 )
 
 require (
