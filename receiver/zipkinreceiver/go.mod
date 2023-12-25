@@ -15,7 +15,7 @@ require (
 	go.opentelemetry.io/collector/pdata v1.0.0-rcv0017.0.20231026220224-6405e152a2d9
 	go.opentelemetry.io/collector/receiver v0.88.1-0.20231026220224-6405e152a2d9
 	go.opentelemetry.io/collector/semconv v0.88.1-0.20231026220224-6405e152a2d9
-	google.golang.org/protobuf v1.31.0
+	google.golang.org/protobuf v1.32.0
 )
 
 require (
