@@ -91,21 +91,38 @@ func (p *reduceProcessor) Shutdown(ctx context.Context) error {
 func (p *reduceProcessor) ConsumeLogs(ctx context.Context, ld plog.Logs) error {
 	for i := 0; i < ld.ResourceLogs().Len(); i++ {
 		rl := ld.ResourceLogs().At(i)
+
+		// generate hash for resource attributes
 		resourceAttrsHash := pdatautil.MapHash(rl.Resource().Attributes())
+
 		for j := 0; j < rl.ScopeLogs().Len(); j++ {
 			sl := rl.ScopeLogs().At(j)
+
+			// increment number of received log records
+			p.telemetryBuilder.ReduceProcessorReceived.Add(ctx, int64(sl.LogRecords().Len()))
+
+			// generate hash for scope attributes
 			scopeAttrsHash := pdatautil.MapHash(sl.Scope().Attributes())
+
 			for k := 0; k < sl.LogRecords().Len(); k++ {
 				lr := sl.LogRecords().At(k)
+
+				// generate hash for log record
 				hash := p.generateHash(resourceAttrsHash, scopeAttrsHash, lr)
+
+				// try to get log state from the cache
 				state, ok := p.cache.Get(hash)
 				if ok {
-					// log state was found in the cache, merge log record with state
+					// state was found in the cache, merge log record with existing state
 					state.mergeLogRecord(lr)
+
+					// increment number of merged log records
+					p.telemetryBuilder.ReduceProcessorMerged.Add(ctx, 1)
 				} else {
-					// log state was not found in the cache, add new state to the cache
+					// state was not found in the cache, create a new state
 					state = newMergeState(rl.Resource(), sl.Scope(), lr)
 				}
+				// add state to the cache, replaces existing state if it was found
 				p.cache.Add(hash, state)
 			}
 		}
@@ -118,6 +135,9 @@ func (p *reduceProcessor) ConsumeLogs(ctx context.Context, ld plog.Logs) error {
 func (p *reduceProcessor) onEvict(key [16]byte, value mergeState) {
 	lr := value.toLogs()
 	p.nextConsumer.ConsumeLogs(context.Background(), lr)
+
+	// increment number of output log records
+	p.telemetryBuilder.ReduceProcessorReceived.Add(context.Background(), 1)
 }
 
 func (p *reduceProcessor) Flush(context.Context) error {

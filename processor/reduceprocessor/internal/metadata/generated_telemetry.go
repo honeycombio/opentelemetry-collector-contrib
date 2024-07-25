@@ -24,9 +24,11 @@ func Tracer(settings component.TelemetrySettings) trace.Tracer {
 // TelemetryBuilder provides an interface for components to report telemetry
 // as defined in metadata and user config.
 type TelemetryBuilder struct {
-	meter                 metric.Meter
-	ReduceprocessorMerged metric.Int64Counter
-	level                 configtelemetry.Level
+	meter                   metric.Meter
+	ReduceProcessorMerged   metric.Int64Counter
+	ReduceProcessorOutput   metric.Int64Counter
+	ReduceProcessorReceived metric.Int64Counter
+	level                   configtelemetry.Level
 }
 
 // telemetryBuilderOption applies changes to default builder.
@@ -52,9 +54,21 @@ func NewTelemetryBuilder(settings component.TelemetrySettings, options ...teleme
 	} else {
 		builder.meter = noop.Meter{}
 	}
-	builder.ReduceprocessorMerged, err = builder.meter.Int64Counter(
-		"reduceprocessor_merged",
+	builder.ReduceProcessorMerged, err = builder.meter.Int64Counter(
+		"reduce_processor_merged",
 		metric.WithDescription("Number of log events that were merged"),
+		metric.WithUnit("1"),
+	)
+	errs = errors.Join(errs, err)
+	builder.ReduceProcessorOutput, err = builder.meter.Int64Counter(
+		"reduce_processor_output",
+		metric.WithDescription("Number of log events output"),
+		metric.WithUnit("1"),
+	)
+	errs = errors.Join(errs, err)
+	builder.ReduceProcessorReceived, err = builder.meter.Int64Counter(
+		"reduce_processor_received",
+		metric.WithDescription("Number of log events received"),
 		metric.WithUnit("1"),
 	)
 	errs = errors.Join(errs, err)

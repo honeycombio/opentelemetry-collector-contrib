@@ -19,8 +19,22 @@ tests:
 
 telemetry:
   metrics:
-    reduceprocessor_merged:
+    reduce_processor_received:
+      description: Number of log events received
+      unit: "1"
+      enabled: true
+      sum:
+        value_type: int
+        monotonic: true
+    reduce_processor_merged:
       description: Number of log events that were merged
+      unit: "1"
+      enabled: true
+      sum:
+        value_type: int
+        monotonic: true
+    reduce_processor_output:
+      description: Number of log events output
       unit: "1"
       enabled: true
       sum:
