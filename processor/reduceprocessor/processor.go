@@ -73,15 +73,16 @@ type reduceProcessor struct {
 
 var _ consumer.Logs = (*reduceProcessor)(nil)
 
-func (rp *reduceProcessor) Capabilities() consumer.Capabilities {
+func (p *reduceProcessor) Capabilities() consumer.Capabilities {
 	return consumer.Capabilities{MutatesData: true}
 }
 
-func (rp *reduceProcessor) Start(context.Context, component.Host) error {
+func (p *reduceProcessor) Start(context.Context, component.Host) error {
 	return nil
 }
 
-func (rp *reduceProcessor) Shutdown(context.Context) error {
+func (p *reduceProcessor) Shutdown(ctx context.Context) error {
+	p.Flush(ctx)
 	return nil
 }
 
