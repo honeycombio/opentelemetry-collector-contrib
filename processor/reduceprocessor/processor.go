@@ -123,19 +123,17 @@ func (p *reduceProcessor) Flush(context.Context) error {
 }
 
 func (p *reduceProcessor) generateHash(resourceHash [16]byte, scopeHash [16]byte, lr plog.LogRecord) [16]byte {
-	groupByMap := make(map[string]any)
+	// get all group by attributes from log record
+	groupByAttrs := pcommon.NewMap()
+	groupByAttrs.EnsureCapacity(len(p.groupByFields))
 	for _, fieldName := range p.groupByFields {
-		lr.Attributes().Range(func(key string, val pcommon.Value) bool {
-			if key == fieldName {
-				groupByMap[key] = val
-			}
-			return true
-		})
+		attr, ok := lr.Attributes().Get(fieldName)
+		if ok {
+			attr.CopyTo(groupByAttrs.PutEmpty(fieldName))
+		}
 	}
 
 	// generate hash for group key
-	groupByAttrs := pcommon.NewMap()
-	groupByAttrs.FromRaw(groupByMap)
 	groupByAttrsHash := pdatautil.MapHash(groupByAttrs)
 
 	// generate hash for log record
