@@ -7,6 +7,7 @@ import (
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/plog"
+	"go.opentelemetry.io/collector/processor"
 
 	"github.com/hashicorp/golang-lru/v2/expirable"
 
@@ -72,6 +73,7 @@ type reduceProcessor struct {
 }
 
 var _ consumer.Logs = (*reduceProcessor)(nil)
+var _ processor.Logs = (*reduceProcessor)(nil)
 
 func (p *reduceProcessor) Capabilities() consumer.Capabilities {
 	return consumer.Capabilities{MutatesData: true}
