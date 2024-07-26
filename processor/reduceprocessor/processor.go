@@ -137,7 +137,7 @@ func (p *reduceProcessor) onEvict(key [16]byte, value mergeState) {
 	p.nextConsumer.ConsumeLogs(context.Background(), lr)
 
 	// increment number of output log records
-	p.telemetryBuilder.ReduceProcessorReceived.Add(context.Background(), 1)
+	p.telemetryBuilder.ReduceProcessorOutput.Add(context.Background(), 1)
 }
 
 func (p *reduceProcessor) Flush(context.Context) error {
