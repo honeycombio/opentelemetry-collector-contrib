@@ -6,10 +6,18 @@
 
 The following telemetry is emitted by this component.
 
-### dedupeprocessor_dropped
+### otelcol_dedupeprocessor_dropped
 
-Number of dropped log events
+Number of dropped log records
 
 | Unit | Metric Type | Value Type | Monotonic |
 | ---- | ----------- | ---------- | --------- |
-| 1 | Sum | Int | true |
+| {records} | Sum | Int | true |
+
+### otelcol_dedupeprocessor_output
+
+Number of data log records output
+
+| Unit | Metric Type | Value Type | Monotonic |
+| ---- | ----------- | ---------- | --------- |
+| {records} | Sum | Int | true |

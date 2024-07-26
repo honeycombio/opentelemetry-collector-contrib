@@ -35,6 +35,7 @@ func (a *dedupeProcessor) processLogs(ctx context.Context, ld plog.Logs) (plog.L
 				}
 				// log record was added to the cache, keep it
 				a.cache.Add(hash, true)
+				a.telemetryBuilder.DedupeprocessorOutput.Add(ctx, int64(1))
 				return false
 			})
 			return sl.LogRecords().Len() == 0

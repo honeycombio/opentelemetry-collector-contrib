@@ -14,11 +14,11 @@ import (
 )
 
 func Meter(settings component.TelemetrySettings) metric.Meter {
-	return settings.MeterProvider.Meter("otelcol/dedupe")
+	return settings.MeterProvider.Meter("github.com/open-telemetry/opentelemetry-collector-contrib/processor/dedupeprocessor")
 }
 
 func Tracer(settings component.TelemetrySettings) trace.Tracer {
-	return settings.TracerProvider.Tracer("otelcol/dedupe")
+	return settings.TracerProvider.Tracer("github.com/open-telemetry/opentelemetry-collector-contrib/processor/dedupeprocessor")
 }
 
 // TelemetryBuilder provides an interface for components to report telemetry
@@ -26,6 +26,7 @@ func Tracer(settings component.TelemetrySettings) trace.Tracer {
 type TelemetryBuilder struct {
 	meter                  metric.Meter
 	DedupeprocessorDropped metric.Int64Counter
+	DedupeprocessorOutput  metric.Int64Counter
 	level                  configtelemetry.Level
 }
 
@@ -53,9 +54,15 @@ func NewTelemetryBuilder(settings component.TelemetrySettings, options ...teleme
 		builder.meter = noop.Meter{}
 	}
 	builder.DedupeprocessorDropped, err = builder.meter.Int64Counter(
-		"dedupeprocessor_dropped",
-		metric.WithDescription("Number of dropped log events"),
-		metric.WithUnit("1"),
+		"otelcol_dedupeprocessor_dropped",
+		metric.WithDescription("Number of dropped log records"),
+		metric.WithUnit("{records}"),
+	)
+	errs = errors.Join(errs, err)
+	builder.DedupeprocessorOutput, err = builder.meter.Int64Counter(
+		"otelcol_dedupeprocessor_output",
+		metric.WithDescription("Number of data log records output"),
+		metric.WithUnit("{records}"),
 	)
 	errs = errors.Join(errs, err)
 	return &builder, errs

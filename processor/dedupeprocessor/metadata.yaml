@@ -1,5 +1,4 @@
 type: dedupe
-scope_name: otelcol/dedupe
 
 status:
   class: processor
@@ -20,8 +19,15 @@ tests:
 telemetry:
   metrics:
     dedupeprocessor_dropped:
-      description: Number of dropped log events
-      unit: "1"
+      description: Number of dropped log records
+      unit: "{records}"
+      enabled: true
+      sum:
+        value_type: int
+        monotonic: true
+    dedupeprocessor_output:
+      description: Number of data log records output
+      unit: "{records}"
       enabled: true
       sum:
         value_type: int
