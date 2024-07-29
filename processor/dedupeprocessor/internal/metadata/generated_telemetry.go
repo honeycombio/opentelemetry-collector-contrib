@@ -24,10 +24,11 @@ func Tracer(settings component.TelemetrySettings) trace.Tracer {
 // TelemetryBuilder provides an interface for components to report telemetry
 // as defined in metadata and user config.
 type TelemetryBuilder struct {
-	meter                  metric.Meter
-	DedupeprocessorDropped metric.Int64Counter
-	DedupeprocessorOutput  metric.Int64Counter
-	level                  configtelemetry.Level
+	meter                   metric.Meter
+	DedupeProcessorDropped  metric.Int64Counter
+	DedupeProcessorOutput   metric.Int64Counter
+	DedupeProcessorReceived metric.Int64Counter
+	level                   configtelemetry.Level
 }
 
 // telemetryBuilderOption applies changes to default builder.
@@ -53,15 +54,21 @@ func NewTelemetryBuilder(settings component.TelemetrySettings, options ...teleme
 	} else {
 		builder.meter = noop.Meter{}
 	}
-	builder.DedupeprocessorDropped, err = builder.meter.Int64Counter(
-		"otelcol_dedupeprocessor_dropped",
+	builder.DedupeProcessorDropped, err = builder.meter.Int64Counter(
+		"dedupe_processor_dropped",
 		metric.WithDescription("Number of dropped log records"),
 		metric.WithUnit("{records}"),
 	)
 	errs = errors.Join(errs, err)
-	builder.DedupeprocessorOutput, err = builder.meter.Int64Counter(
-		"otelcol_dedupeprocessor_output",
+	builder.DedupeProcessorOutput, err = builder.meter.Int64Counter(
+		"dedupe_processor_output",
 		metric.WithDescription("Number of data log records output"),
+		metric.WithUnit("{records}"),
+	)
+	errs = errors.Join(errs, err)
+	builder.DedupeProcessorReceived, err = builder.meter.Int64Counter(
+		"dedupe_processor_received",
+		metric.WithDescription("Number of received log records"),
 		metric.WithUnit("{records}"),
 	)
 	errs = errors.Join(errs, err)

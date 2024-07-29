@@ -18,14 +18,21 @@ tests:
 
 telemetry:
   metrics:
-    dedupeprocessor_dropped:
+    dedupe_processor_received:
+      description: Number of received log records
+      unit: "{records}"
+      enabled: true
+      sum:
+        value_type: int
+        monotonic: true
+    dedupe_processor_dropped:
       description: Number of dropped log records
       unit: "{records}"
       enabled: true
       sum:
         value_type: int
         monotonic: true
-    dedupeprocessor_output:
+    dedupe_processor_output:
       description: Number of data log records output
       unit: "{records}"
       enabled: true
