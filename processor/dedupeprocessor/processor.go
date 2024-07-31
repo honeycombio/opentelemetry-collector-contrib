@@ -6,6 +6,7 @@ package dedupeprocessor // import "github.com/open-telemetry/opentelemetry-colle
 import (
 	"context"
 
+	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/plog"
 
 	"github.com/hashicorp/golang-lru/v2/expirable"
@@ -19,26 +20,31 @@ import (
 type dedupeProcessor struct {
 	telemetryBuilder *metadata.TelemetryBuilder
 	cache            *expirable.LRU[[16]byte, bool]
+	config           *Config
 }
 
-func (a *dedupeProcessor) processLogs(ctx context.Context, ld plog.Logs) (plog.Logs, error) {
+func (p *dedupeProcessor) processLogs(ctx context.Context, ld plog.Logs) (plog.Logs, error) {
 	ld.ResourceLogs().RemoveIf(func(rl plog.ResourceLogs) bool {
-		resourceAttrsHash := pdatautil.MapHash(rl.Resource().Attributes())
+		resourceAttrs := p.filterAttributes(rl.Resource().Attributes())
+		resourceAttrsHash := pdatautil.MapHash(resourceAttrs)
+
 		rl.ScopeLogs().RemoveIf(func(sl plog.ScopeLogs) bool {
-			scopeAttrsHash := pdatautil.MapHash(sl.Scope().Attributes())
+			scopeAttrs := p.filterAttributes(sl.Scope().Attributes())
+			scopeAttrsHash := pdatautil.MapHash(scopeAttrs)
+
 			sl.LogRecords().RemoveIf(func(lr plog.LogRecord) bool {
 				// record the number of log records that were received
-				a.telemetryBuilder.DedupeProcessorReceived.Add(ctx, int64(sl.LogRecords().Len()))
+				p.telemetryBuilder.DedupeProcessorReceived.Add(ctx, int64(sl.LogRecords().Len()))
 
-				hash := generateHash(resourceAttrsHash, scopeAttrsHash, lr)
-				if a.cache.Contains(hash) {
+				hash := p.generateHash(resourceAttrsHash, scopeAttrsHash, lr)
+				if p.cache.Contains(hash) {
 					// log record was already in the cache, drop it
-					a.telemetryBuilder.DedupeProcessorDropped.Add(ctx, int64(1))
+					p.telemetryBuilder.DedupeProcessorDropped.Add(ctx, int64(1))
 					return true
 				}
 				// log record was added to the cache, keep it
-				a.cache.Add(hash, true)
-				a.telemetryBuilder.DedupeProcessorOutput.Add(ctx, int64(1))
+				p.cache.Add(hash, true)
+				p.telemetryBuilder.DedupeProcessorOutput.Add(ctx, int64(1))
 				return false
 			})
 			return sl.LogRecords().Len() == 0
@@ -48,8 +54,24 @@ func (a *dedupeProcessor) processLogs(ctx context.Context, ld plog.Logs) (plog.L
 	return ld, nil
 }
 
-func generateHash(resourceHash [16]byte, scopeHash [16]byte, lr plog.LogRecord) [16]byte {
-	logAttrsHash := pdatautil.MapHash(lr.Attributes())
+func (p *dedupeProcessor) filterAttributes(attrs pcommon.Map) pcommon.Map {
+	filteredAttrs := pcommon.NewMap()
+	filteredAttrs.EnsureCapacity(attrs.Len())
+	attrs.CopyTo(filteredAttrs)
+
+	// remove ignored attributes
+	// we do this after copying to avoid looping over the ignored attributes
+	// for every attribute in the original map
+	for _, attr := range p.config.IgnoreAttributes {
+		filteredAttrs.Remove(attr)
+	}
+
+	return filteredAttrs
+}
+
+func (p *dedupeProcessor) generateHash(resourceHash [16]byte, scopeHash [16]byte, lr plog.LogRecord) [16]byte {
+	logAttrs := p.filterAttributes(lr.Attributes())
+	logAttrsHash := pdatautil.MapHash(logAttrs)
 
 	hash := xxhash.New()
 	hash.Write(resourceHash[:])

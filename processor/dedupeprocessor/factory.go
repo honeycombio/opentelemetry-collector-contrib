@@ -22,8 +22,9 @@ var processorCapabilities = consumer.Capabilities{MutatesData: true}
 // Note: This isn't a valid configuration because the processor would do no work.
 func createDefaultConfig() component.Config {
 	return &Config{
-		TTL:        time.Second * 30,
-		MaxEntries: 1000,
+		TTL:              time.Second * 30,
+		MaxEntries:       1000,
+		IgnoreAttributes: []string{},
 	}
 }
 
@@ -40,6 +41,7 @@ func newDedupeLogProcessor(set processor.Settings, cfg *Config) (*dedupeProcesso
 	return &dedupeProcessor{
 		telemetryBuilder: telemetryBuilder,
 		cache:            cache,
+		config:           cfg,
 	}, nil
 }
 

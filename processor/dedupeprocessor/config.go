@@ -14,6 +14,8 @@ type Config struct {
 	TTL time.Duration `mapstructure:"ttl"`
 	// MaxEntries is the maximum number of entries that can be stored in the cache. Default is 1000.
 	MaxEntries int `mapstructure:"max_entries"`
+	// IgnoreAttributes is a list of attributes that should be ignored when calculating the hash for each log record.
+	IgnoreAttributes []string `mapstructure:"ignore_attributes"`
 }
 
 var _ component.Config = (*Config)(nil)

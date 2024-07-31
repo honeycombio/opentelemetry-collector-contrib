@@ -22,6 +22,7 @@ func TestProcessLogsDeduplicate(t *testing.T) {
 		name         string
 		inputFile    string
 		expectedFile string
+		ignoreAttrs  []string
 	}{
 		{
 			name:         "different record attrs",
@@ -48,6 +49,24 @@ func TestProcessLogsDeduplicate(t *testing.T) {
 			inputFile:    "scope-attrs.yaml",
 			expectedFile: "scope-attrs-expected.yaml",
 		},
+		{
+			name:         "ignore resource attrs",
+			inputFile:    "ignore-resource.yaml",
+			expectedFile: "ignore-resource-expected.yaml",
+			ignoreAttrs:  []string{"resource.required"},
+		},
+		{
+			name:         "ignore scope attrs",
+			inputFile:    "ignore-scope.yaml",
+			expectedFile: "ignore-scope-expected.yaml",
+			ignoreAttrs:  []string{"scope.required"},
+		},
+		{
+			name:         "ignore record attrs",
+			inputFile:    "ignore-record.yaml",
+			expectedFile: "ignore-record-expected.yaml",
+			ignoreAttrs:  []string{"log.required"},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -55,6 +74,7 @@ func TestProcessLogsDeduplicate(t *testing.T) {
 			factory := NewFactory()
 			cfg := factory.CreateDefaultConfig()
 			oCfg := cfg.(*Config)
+			oCfg.IgnoreAttributes = tc.ignoreAttrs
 
 			sink := new(consumertest.LogsSink)
 			p, err := factory.CreateLogsProcessor(context.Background(), processortest.NewNopSettings(), oCfg, sink)
