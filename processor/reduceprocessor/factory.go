@@ -13,10 +13,10 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/reduceprocessor/internal/metadata"
 )
 
-// Note: This isn't a valid configuration because the processor would do no work.
+// createDefaultConfig creates the default configuration for the processor.
 func createDefaultConfig() component.Config {
 	return &Config{
-		FlushInterval:        time.Second * 30,
+		WaitFor:              time.Second * 10,
 		MaxEntries:           1000,
 		GroupBy:              []string{},
 		DefaultMergeStrategy: First,
@@ -40,7 +40,7 @@ func newReduceLogProcessor(_ context.Context, set processor.Settings, cfg *Confi
 		config:           cfg,
 	}
 
-	cache := expirable.NewLRU[[16]byte, mergeState](cfg.MaxEntries, p.onEvict, cfg.FlushInterval)
+	cache := expirable.NewLRU[[16]byte, mergeState](cfg.MaxEntries, p.onEvict, cfg.WaitFor)
 	p.cache = cache
 
 	return p, nil

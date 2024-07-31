@@ -74,7 +74,7 @@ func TestProcessLogsDeduplicate(t *testing.T) {
 			cfg := factory.CreateDefaultConfig()
 			oCfg := cfg.(*Config)
 			oCfg.GroupBy = []string{"partition_id"}
-			oCfg.TTL = time.Second * 1
+			oCfg.WaitFor = time.Second * 1
 			oCfg.MergeStrategies = tc.mergeStrategies
 
 			sink := new(consumertest.LogsSink)

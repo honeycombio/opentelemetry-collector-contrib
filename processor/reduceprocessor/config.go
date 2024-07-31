@@ -1,6 +1,7 @@
 package reduceprocessor
 
 import (
+	"errors"
 	"time"
 
 	"go.opentelemetry.io/collector/component"
@@ -16,8 +17,8 @@ const (
 )
 
 type Config struct {
-	// FlushInterval is the time-to-live for each entry in the cache. Default is 30 seconds.
-	FlushInterval time.Duration `mapstructure:"flush_interval"`
+	// WaitFor is the amount of time to wait after the last log record was received before passing it onto the next component in the pipeline. Default is 10s.
+	WaitFor time.Duration `mapstructure:"wait_for"`
 	// MaxEntries is the maximum number of entries that can be stored in the cache. Default is 1000.
 	MaxEntries int `mapstructure:"max_entries"`
 	// GroupBy is the list of attribute names to be used to identify unique log records.
