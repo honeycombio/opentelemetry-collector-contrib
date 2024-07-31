@@ -17,10 +17,11 @@ import (
 
 func TestProcessLogsDeduplicate(t *testing.T) {
 	testCases := []struct {
-		name            string
-		inputFile       string
-		expectedFile    string
-		mergeStrategies map[string]MergeStrategy
+		name               string
+		inputFile          string
+		expectedFile       string
+		mergeStrategies    map[string]MergeStrategy
+		skippedAggregation int
 	}{
 		{
 			name:         "different record attrs",
@@ -59,6 +60,12 @@ func TestProcessLogsDeduplicate(t *testing.T) {
 				"location": Concat,
 			},
 		},
+		{
+			name:               "skip aggregation when no group by attributes match",
+			inputFile:          "skip-aggregation.yaml",
+			expectedFile:       "skip-aggregation-expected.yaml",
+			skippedAggregation: 1,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -67,7 +74,7 @@ func TestProcessLogsDeduplicate(t *testing.T) {
 			cfg := factory.CreateDefaultConfig()
 			oCfg := cfg.(*Config)
 			oCfg.GroupBy = []string{"partition_id"}
-			oCfg.FlushInterval = time.Second * 1
+			oCfg.TTL = time.Second * 1
 			oCfg.MergeStrategies = tc.mergeStrategies
 
 			sink := new(consumertest.LogsSink)
@@ -81,9 +88,10 @@ func TestProcessLogsDeduplicate(t *testing.T) {
 
 			assert.NoError(t, p.ConsumeLogs(context.Background(), input))
 
-			// check no logs are emitted immediately
+			// check aggregated logs are not emitted immediately
+			// non-aggregated logs are emitted
 			actual := sink.AllLogs()
-			require.Len(t, actual, 0)
+			require.Len(t, actual, tc.skippedAggregation)
 
 			// flush the cache to evit all entries, causing logs to be emitted
 			p.(*reduceProcessor).cache.Purge()

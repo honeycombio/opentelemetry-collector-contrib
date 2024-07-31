@@ -71,26 +71,25 @@ func (p *reduceProcessor) Shutdown(ctx context.Context) error {
 }
 
 func (p *reduceProcessor) ConsumeLogs(ctx context.Context, ld plog.Logs) error {
-	for i := 0; i < ld.ResourceLogs().Len(); i++ {
-		rl := ld.ResourceLogs().At(i)
-
+	ld.ResourceLogs().RemoveIf(func(rl plog.ResourceLogs) bool {
 		// generate hash for resource attributes
 		resourceAttrsHash := pdatautil.MapHash(rl.Resource().Attributes())
 
-		for j := 0; j < rl.ScopeLogs().Len(); j++ {
-			sl := rl.ScopeLogs().At(j)
-
+		rl.ScopeLogs().RemoveIf(func(sl plog.ScopeLogs) bool {
 			// increment number of received log records
 			p.telemetryBuilder.ReduceProcessorReceived.Add(ctx, int64(sl.LogRecords().Len()))
 
 			// generate hash for scope attributes
 			scopeAttrsHash := pdatautil.MapHash(sl.Scope().Attributes())
 
-			for k := 0; k < sl.LogRecords().Len(); k++ {
-				lr := sl.LogRecords().At(k)
-
-				// generate hash for log record
-				hash := p.generateHash(resourceAttrsHash, scopeAttrsHash, lr)
+			sl.LogRecords().RemoveIf(func(lr plog.LogRecord) bool {
+				// generate hash for log record using group by attributes
+				// keep being true means we can aggregate the log record
+				// keep being false means we can't aggregate the log record
+				hash, keep := p.generateHash(resourceAttrsHash, scopeAttrsHash, lr)
+				if !keep {
+					return false
+				}
 
 				// try to get log state from the cache
 				state, ok := p.cache.Get(hash)
@@ -106,11 +105,18 @@ func (p *reduceProcessor) ConsumeLogs(ctx context.Context, ld plog.Logs) error {
 				}
 				// add state to the cache, replaces existing state if it was found
 				p.cache.Add(hash, state)
-			}
-		}
+
+				return true
+			})
+			return sl.LogRecords().Len() == 0
+		})
+		return rl.ScopeLogs().Len() == 0
+	})
+
+	// pass any remaining log records to the next consumer
+	if ld.ResourceLogs().Len() > 0 {
+		return p.nextConsumer.ConsumeLogs(ctx, ld)
 	}
-	// reutrn nil to indicate logs were processed successfully
-	// we're actually not doing anything with the logs right now
 	return nil
 }
 
@@ -195,7 +201,7 @@ func (p *reduceProcessor) Flush(context.Context) error {
 	return nil
 }
 
-func (p *reduceProcessor) generateHash(resourceHash [16]byte, scopeHash [16]byte, lr plog.LogRecord) [16]byte {
+func (p *reduceProcessor) generateHash(resourceHash [16]byte, scopeHash [16]byte, lr plog.LogRecord) ([16]byte, bool) {
 	// get all group by attributes from log record
 	groupByAttrs := pcommon.NewMap()
 	groupByAttrs.EnsureCapacity(len(p.config.GroupBy))
@@ -204,6 +210,11 @@ func (p *reduceProcessor) generateHash(resourceHash [16]byte, scopeHash [16]byte
 		if ok {
 			attr.CopyTo(groupByAttrs.PutEmpty(attrName))
 		}
+	}
+
+	var key [16]byte
+	if groupByAttrs.Len() == 0 {
+		return key, false
 	}
 
 	// generate hash for group key
@@ -217,7 +228,6 @@ func (p *reduceProcessor) generateHash(resourceHash [16]byte, scopeHash [16]byte
 	hash.Write([]byte(lr.Body().AsString()))
 	hash.Write([]byte(lr.SeverityText()))
 
-	var key [16]byte
 	copy(key[:], hash.Sum(nil))
-	return key
+	return key, true
 }
