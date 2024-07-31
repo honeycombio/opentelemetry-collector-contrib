@@ -31,25 +31,6 @@ func newMergeState(r pcommon.Resource, s pcommon.InstrumentationScope, lr plog.L
 	}
 }
 
-func (state mergeState) mergeLogRecord(lr plog.LogRecord) {
-	// create new attributes map and ensure it has enough capacity to hold attributes from both
-	// the existing log record and the new log record
-	attrs := pcommon.NewMap()
-	attrs.EnsureCapacity(state.logRecord.Attributes().Len() + lr.Attributes().Len())
-
-	// copy existing attributes
-	state.logRecord.Attributes().CopyTo(attrs)
-
-	// copy new attributes, overwriting existing ones
-	lr.Attributes().Range(func(k string, v pcommon.Value) bool {
-		v.CopyTo(attrs.PutEmpty(k))
-		return true
-	})
-
-	// replace attributes in log record
-	attrs.CopyTo(state.logRecord.Attributes())
-}
-
 func (state mergeState) toLogs() plog.Logs {
 	logs := plog.NewLogs()
 
@@ -69,7 +50,7 @@ type reduceProcessor struct {
 	telemetryBuilder *metadata.TelemetryBuilder
 	nextConsumer     consumer.Logs
 	cache            *expirable.LRU[[16]byte, mergeState]
-	groupByFields    []string
+	config           *Config
 }
 
 var _ consumer.Logs = (*reduceProcessor)(nil)
@@ -114,7 +95,7 @@ func (p *reduceProcessor) ConsumeLogs(ctx context.Context, ld plog.Logs) error {
 				state, ok := p.cache.Get(hash)
 				if ok {
 					// state was found in the cache, merge log record with existing state
-					state.mergeLogRecord(lr)
+					p.mergeLogRecord(state, lr)
 
 					// increment number of merged log records
 					p.telemetryBuilder.ReduceProcessorMerged.Add(ctx, 1)
@@ -130,6 +111,63 @@ func (p *reduceProcessor) ConsumeLogs(ctx context.Context, ld plog.Logs) error {
 	// reutrn nil to indicate logs were processed successfully
 	// we're actually not doing anything with the logs right now
 	return nil
+}
+
+func (p *reduceProcessor) mergeLogRecord(state mergeState, lr plog.LogRecord) {
+	// create new attributes map and ensure it has enough capacity to hold attributes from both
+	// the existing log record and the new log record
+	attrs := pcommon.NewMap()
+	attrs.EnsureCapacity(state.logRecord.Attributes().Len() + lr.Attributes().Len())
+
+	// copy existing attributes
+	state.logRecord.Attributes().CopyTo(attrs)
+
+	// loop over new record's attributes and apply merge strategy
+	lr.Attributes().Range(func(attrName string, attrValue pcommon.Value) bool {
+		mergeStrategy, ok := p.config.MergeStrategies[attrName]
+		if !ok {
+			// use default merge strategy if no strategy is defined for the attribute
+			mergeStrategy = p.config.DefaultMergeStrategy
+		}
+
+		switch mergeStrategy {
+		case First:
+			// add attribute if it doesn't exist
+			_, ok := state.logRecord.Attributes().Get(attrName)
+			if !ok {
+				attrValue.CopyTo(attrs.PutEmpty(attrName))
+			}
+		case Last:
+			// overwrite existing attribute if present
+			attrValue.CopyTo(attrs.PutEmpty(attrName))
+		case Append:
+			// append value to existing value if it exists
+			existingValue, ok := state.logRecord.Attributes().Get(attrName)
+			if ok {
+				// if existing value is a slice, append to it
+				// otherwise, create a new slice and append both values
+				// NOTE: not sure how this will deal with different data types :/
+				var slice pcommon.Slice
+				if existingValue.Type() == pcommon.ValueTypeSlice {
+					slice = existingValue.Slice()
+					slice.EnsureCapacity(slice.Len() + 1)
+				} else {
+					slice = pcommon.NewSlice()
+					slice.EnsureCapacity(2)
+					existingValue.CopyTo(slice.AppendEmpty())
+				}
+				attrValue.CopyTo(slice.AppendEmpty())
+				slice.CopyTo(attrs.PutEmptySlice(attrName))
+			} else {
+				// add new attribute as it doesn't exist yet
+				attrValue.CopyTo(attrs.PutEmpty(attrName))
+			}
+		}
+		return true
+	})
+
+	// replace attributes in log record
+	attrs.CopyTo(state.logRecord.Attributes())
 }
 
 func (p *reduceProcessor) onEvict(key [16]byte, value mergeState) {
@@ -148,11 +186,11 @@ func (p *reduceProcessor) Flush(context.Context) error {
 func (p *reduceProcessor) generateHash(resourceHash [16]byte, scopeHash [16]byte, lr plog.LogRecord) [16]byte {
 	// get all group by attributes from log record
 	groupByAttrs := pcommon.NewMap()
-	groupByAttrs.EnsureCapacity(len(p.groupByFields))
-	for _, fieldName := range p.groupByFields {
-		attr, ok := lr.Attributes().Get(fieldName)
+	groupByAttrs.EnsureCapacity(len(p.config.GroupBy))
+	for _, attrName := range p.config.GroupBy {
+		attr, ok := lr.Attributes().Get(attrName)
 		if ok {
-			attr.CopyTo(groupByAttrs.PutEmpty(fieldName))
+			attr.CopyTo(groupByAttrs.PutEmpty(attrName))
 		}
 	}
 

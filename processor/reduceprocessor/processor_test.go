@@ -17,14 +17,39 @@ import (
 
 func TestProcessLogsDeduplicate(t *testing.T) {
 	testCases := []struct {
-		name         string
-		inputFile    string
-		expectedFile string
+		name            string
+		inputFile       string
+		expectedFile    string
+		mergeStrategies map[string]MergeStrategy
 	}{
 		{
 			name:         "different record attrs",
 			inputFile:    "attrs.yaml",
 			expectedFile: "attrs-expected.yaml",
+		},
+		{
+			name:         "merge strategy first",
+			inputFile:    "merge.yaml",
+			expectedFile: "merge-first-expected.yaml",
+			mergeStrategies: map[string]MergeStrategy{
+				"location": First,
+			},
+		},
+		{
+			name:         "merge strategy last",
+			inputFile:    "merge.yaml",
+			expectedFile: "merge-last-expected.yaml",
+			mergeStrategies: map[string]MergeStrategy{
+				"location": Last,
+			},
+		},
+		{
+			name:         "merge strategy append",
+			inputFile:    "merge.yaml",
+			expectedFile: "merge-append-expected.yaml",
+			mergeStrategies: map[string]MergeStrategy{
+				"location": Append,
+			},
 		},
 	}
 
@@ -33,8 +58,9 @@ func TestProcessLogsDeduplicate(t *testing.T) {
 			factory := NewFactory()
 			cfg := factory.CreateDefaultConfig()
 			oCfg := cfg.(*Config)
-			oCfg.FieldNames = []string{"partition_id"}
+			oCfg.GroupBy = []string{"partition_id"}
 			oCfg.FlushInterval = time.Second * 1
+			oCfg.MergeStrategies = tc.mergeStrategies
 
 			sink := new(consumertest.LogsSink)
 			p, err := factory.CreateLogsProcessor(context.Background(), processortest.NewNopSettings(), oCfg, sink)

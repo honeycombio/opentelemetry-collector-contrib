@@ -16,16 +16,18 @@ import (
 // Note: This isn't a valid configuration because the processor would do no work.
 func createDefaultConfig() component.Config {
 	return &Config{
-		FlushInterval: time.Second * 30,
-		MaxEntries:    1000,
-		FieldNames:    []string{},
+		FlushInterval:        time.Second * 30,
+		MaxEntries:           1000,
+		GroupBy:              []string{},
+		DefaultMergeStrategy: First,
+		MergeStrategies:      map[string]MergeStrategy{},
 	}
 }
 
 // newReduceLogProcessor returns a processor that modifies attributes of a
 // log record. To construct the attributes processors, the use of the factory
 // methods are required in order to validate the inputs.
-func newReduceLogProcessor(ctx context.Context, set processor.Settings, cfg *Config, nextConsumer consumer.Logs) (*reduceProcessor, error) {
+func newReduceLogProcessor(_ context.Context, set processor.Settings, cfg *Config, nextConsumer consumer.Logs) (*reduceProcessor, error) {
 	telemetryBuilder, err := metadata.NewTelemetryBuilder(set.TelemetrySettings)
 	if err != nil {
 		return nil, err
@@ -33,8 +35,8 @@ func newReduceLogProcessor(ctx context.Context, set processor.Settings, cfg *Con
 
 	p := &reduceProcessor{
 		telemetryBuilder: telemetryBuilder,
-		groupByFields:    cfg.FieldNames,
 		nextConsumer:     nextConsumer,
+		config:           cfg,
 	}
 
 	cache := expirable.NewLRU[[16]byte, mergeState](cfg.MaxEntries, p.onEvict, cfg.FlushInterval)
