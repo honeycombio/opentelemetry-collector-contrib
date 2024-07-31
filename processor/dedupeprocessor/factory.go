@@ -5,7 +5,6 @@ package dedupeprocessor // import "github.com/open-telemetry/opentelemetry-colle
 
 import (
 	"context"
-	"time"
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"
@@ -22,7 +21,6 @@ var processorCapabilities = consumer.Capabilities{MutatesData: true}
 // Note: This isn't a valid configuration because the processor would do no work.
 func createDefaultConfig() component.Config {
 	return &Config{
-		TTL:              time.Second * 30,
 		MaxEntries:       1000,
 		IgnoreAttributes: []string{},
 	}
@@ -36,7 +34,7 @@ func newDedupeLogProcessor(set processor.Settings, cfg *Config) (*dedupeProcesso
 	if err != nil {
 		return nil, err
 	}
-	cache := expirable.NewLRU[[16]byte, bool](cfg.MaxEntries, nil, cfg.TTL)
+	cache := expirable.NewLRU[[16]byte, bool](cfg.MaxEntries, nil, 0)
 
 	return &dedupeProcessor{
 		telemetryBuilder: telemetryBuilder,
