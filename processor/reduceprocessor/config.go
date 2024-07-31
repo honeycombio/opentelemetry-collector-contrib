@@ -34,6 +34,8 @@ var _ component.Config = (*Config)(nil)
 
 // Validate checks if the processor configuration is valid
 func (cfg *Config) Validate() error {
-	// TODO: Add validation logic
+	if len(cfg.GroupBy) == 0 {
+		return errors.New("group_by must contain at least one attribute name")
+	}
 	return nil
 }
