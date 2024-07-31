@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/consumer/consumertest"
 	"go.opentelemetry.io/collector/processor/processortest"
@@ -21,7 +20,7 @@ func TestProcessLogsDeduplicate(t *testing.T) {
 		inputFile          string
 		expectedFile       string
 		mergeStrategies    map[string]MergeStrategy
-		skippedAggregation int
+		numLogsBeforeFlush int
 	}{
 		{
 			name:         "different record attrs",
@@ -64,7 +63,7 @@ func TestProcessLogsDeduplicate(t *testing.T) {
 			name:               "skip aggregation when no group by attributes match",
 			inputFile:          "skip-aggregation.yaml",
 			expectedFile:       "skip-aggregation-expected.yaml",
-			skippedAggregation: 1,
+			numLogsBeforeFlush: 1,
 		},
 	}
 
@@ -87,21 +86,19 @@ func TestProcessLogsDeduplicate(t *testing.T) {
 			expected, err := golden.ReadLogs(filepath.Join("testdata", tc.expectedFile))
 			require.NoError(t, err)
 
-			assert.NoError(t, p.ConsumeLogs(context.Background(), input))
+			require.NoError(t, p.ConsumeLogs(context.Background(), input))
 
 			// check aggregated logs are not emitted immediately
-			// non-aggregated logs are emitted
+			// non-aggregated logs are emitted immediately
 			actual := sink.AllLogs()
-			require.Len(t, actual, tc.skippedAggregation)
+			require.Len(t, actual, tc.numLogsBeforeFlush)
 
 			// flush the cache to evit all entries, causing logs to be emitted
 			p.(*reduceProcessor).cache.Purge()
-
-			// check logs are emitted after flush interval
 			actual = sink.AllLogs()
 			require.Len(t, actual, 1)
 
-			assert.NoError(t, plogtest.CompareLogs(expected, actual[0]))
+			require.NoError(t, plogtest.CompareLogs(expected, actual[0]))
 		})
 	}
 }
