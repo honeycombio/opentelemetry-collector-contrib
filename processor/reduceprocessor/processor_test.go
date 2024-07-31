@@ -2,6 +2,7 @@ package reduceprocessor
 
 import (
 	"context"
+	"fmt"
 	"path/filepath"
 	"testing"
 	"time"
@@ -100,5 +101,35 @@ func TestProcessLogsDeduplicate(t *testing.T) {
 
 			require.NoError(t, plogtest.CompareLogs(expected, actual[0]))
 		})
+	}
+}
+
+func TestMaxMergeCountSendsLogsRecord(t *testing.T) {
+	factory := NewFactory()
+	cfg := factory.CreateDefaultConfig().(*Config)
+	cfg.GroupBy = []string{"partition_id"}
+	cfg.WaitFor = time.Second * 10
+	cfg.MaxMergeCount = 1
+
+	sink := new(consumertest.LogsSink)
+	p, err := factory.CreateLogsProcessor(context.Background(), processortest.NewNopSettings(), cfg, sink)
+	require.NoError(t, err)
+
+	input, err := golden.ReadLogs(filepath.Join("testdata", "max-merge.yaml"))
+	require.NoError(t, err)
+
+	require.NoError(t, p.ConsumeLogs(context.Background(), input))
+
+	p.(*reduceProcessor).cache.Purge()
+
+	actual := sink.AllLogs()
+	require.Len(t, actual, 2)
+
+	for i, actualLog := range actual {
+		expectedFileName := fmt.Sprintf("max-merge-expected-%d.yaml", i+1)
+		expectedLog, err := golden.ReadLogs(filepath.Join("testdata", expectedFileName))
+		require.NoError(t, err)
+
+		require.NoError(t, plogtest.CompareLogs(expectedLog, actualLog))
 	}
 }

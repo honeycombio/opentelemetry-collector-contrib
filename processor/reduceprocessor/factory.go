@@ -22,6 +22,7 @@ func createDefaultConfig() component.Config {
 		DefaultMergeStrategy: First,
 		MergeStrategies:      map[string]MergeStrategy{},
 		ConcatDelimiter:      ",",
+		MaxMergeCount:        100,
 	}
 }
 

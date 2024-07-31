@@ -31,6 +31,8 @@ type Config struct {
 	ConcatDelimiter string `mapstructure:"concat_delimiter"`
 	// MergeCountAttribute is the attribute name used to store the use number of merged log records on the aggregated log record'. Default is "".
 	MergeCountAttribute string `mapstructure:"merge_count_attribute"`
+	// MaxMergeCount is the maximum number of log records that can be merged into a single aggregated log record. Default is 100.
+	MaxMergeCount int `mapstructure:"max_merge_count"`
 }
 
 var _ component.Config = (*Config)(nil)

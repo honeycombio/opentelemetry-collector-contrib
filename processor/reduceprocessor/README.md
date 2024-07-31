@@ -14,6 +14,7 @@
 | default_merge_strategy | The default merge strategy to use when a custom one has not been defined. | No | `Last` |
 | merge_strategies | A map of attribute names and merge strategy to use when merging attributes. | No | `none` |
 | concat_delimiter | The default delimitor to use when concategnating attribute values together. | No | `,` |
+| max_merge_count | The maximum number of times a log record can be merged. If the limit is reached, the current aggregate is forwarded and a new aggregate is started. | No | 100 |
 
 ### Example configuration
 
@@ -38,4 +39,5 @@ reduce:
     "some-attribute": first
     "another-attribute": last
   concat-delimiter: ","
+  max_merge_count: 100
 ```

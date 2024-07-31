@@ -81,8 +81,17 @@ func (p *reduceProcessor) ConsumeLogs(ctx context.Context, ld plog.Logs) error {
 				// try to get log state from the cache
 				state, ok := p.cache.Get(hash)
 				if ok {
-					// increment state's merge count
-					state.count++
+					// check if the state has reached the maximum number of log records to merge
+					if state.count >= p.config.MaxMergeCount {
+						// remove it from the cache to force it to be evicted and sent to the next consumer
+						p.cache.Remove(hash)
+
+						// crete a new merge state
+						state = newMergeState(rl.Resource(), sl.Scope(), lr)
+					} else {
+						// increment state's merge count
+						state.count++
+					}
 
 					// state was found in the cache, merge log record with existing state
 					p.mergeLogRecord(state, lr)
