@@ -21,6 +21,7 @@ func createDefaultConfig() component.Config {
 		GroupBy:              []string{},
 		DefaultMergeStrategy: First,
 		MergeStrategies:      map[string]MergeStrategy{},
+		ConcatDelimiter:      ",",
 	}
 }
 

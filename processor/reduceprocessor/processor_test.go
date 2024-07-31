@@ -46,9 +46,17 @@ func TestProcessLogsDeduplicate(t *testing.T) {
 		{
 			name:         "merge strategy append",
 			inputFile:    "merge.yaml",
-			expectedFile: "merge-append-expected.yaml",
+			expectedFile: "merge-array-expected.yaml",
 			mergeStrategies: map[string]MergeStrategy{
-				"location": Append,
+				"location": Array,
+			},
+		},
+		{
+			name:         "merge strategy append",
+			inputFile:    "merge.yaml",
+			expectedFile: "merge-concat-expected.yaml",
+			mergeStrategies: map[string]MergeStrategy{
+				"location": Concat,
 			},
 		},
 	}

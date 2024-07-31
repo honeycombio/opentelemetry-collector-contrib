@@ -11,7 +11,8 @@ type MergeStrategy int
 const (
 	First MergeStrategy = iota
 	Last
-	Append
+	Array
+	Concat
 )
 
 type Config struct {
@@ -25,6 +26,8 @@ type Config struct {
 	MergeStrategies map[string]MergeStrategy `mapstructure:"merge_strategy"`
 	// DefaultMergeStrategy is the strategy to use when no merge strategy is defined for an attribute. Default is "first".
 	DefaultMergeStrategy MergeStrategy `mapstructure:"default_merge_strategy"`
+	// ConcatDelimiter is the delimiter to use when merging attributes with the "concat" strategy. Default is ",".
+	ConcatDelimiter string `mapstructure:"concat_delimiter"`
 }
 
 var _ component.Config = (*Config)(nil)

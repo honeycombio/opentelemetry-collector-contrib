@@ -2,6 +2,7 @@ package reduceprocessor
 
 import (
 	"context"
+	"strings"
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"
@@ -140,7 +141,7 @@ func (p *reduceProcessor) mergeLogRecord(state mergeState, lr plog.LogRecord) {
 		case Last:
 			// overwrite existing attribute if present
 			attrValue.CopyTo(attrs.PutEmpty(attrName))
-		case Append:
+		case Array:
 			// append value to existing value if it exists
 			existingValue, ok := state.logRecord.Attributes().Get(attrName)
 			if ok {
@@ -158,6 +159,17 @@ func (p *reduceProcessor) mergeLogRecord(state mergeState, lr plog.LogRecord) {
 				}
 				attrValue.CopyTo(slice.AppendEmpty())
 				slice.CopyTo(attrs.PutEmptySlice(attrName))
+			} else {
+				// add new attribute as it doesn't exist yet
+				attrValue.CopyTo(attrs.PutEmpty(attrName))
+			}
+		case Concat:
+			// concatenate value with existing value if it exists
+			existingValue, ok := state.logRecord.Attributes().Get(attrName)
+			if ok {
+				// concatenate existing value with new value using configured delimiter
+				strValue := strings.Join([]string{existingValue.AsString(), attrValue.AsString()}, p.config.ConcatDelimiter)
+				attrs.PutStr(attrName, strValue)
 			} else {
 				// add new attribute as it doesn't exist yet
 				attrValue.CopyTo(attrs.PutEmpty(attrName))
