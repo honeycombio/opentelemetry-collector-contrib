@@ -24,6 +24,9 @@ resourceLogs:
               - key: name
                 value:
                   stringValue: mike
+              - key: meta.merge_count
+                value:
+                  intValue: 3
             body:
               stringValue: This is a log message
             severityText: "INFO"

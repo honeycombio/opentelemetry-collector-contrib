@@ -76,6 +76,7 @@ func TestProcessLogsDeduplicate(t *testing.T) {
 			oCfg.GroupBy = []string{"partition_id"}
 			oCfg.WaitFor = time.Second * 1
 			oCfg.MergeStrategies = tc.mergeStrategies
+			oCfg.MergeCountAttribute = "meta.merge_count"
 
 			sink := new(consumertest.LogsSink)
 			p, err := factory.CreateLogsProcessor(context.Background(), processortest.NewNopSettings(), oCfg, sink)

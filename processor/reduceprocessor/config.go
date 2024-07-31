@@ -29,6 +29,8 @@ type Config struct {
 	DefaultMergeStrategy MergeStrategy `mapstructure:"default_merge_strategy"`
 	// ConcatDelimiter is the delimiter to use when merging attributes with the "concat" strategy. Default is ",".
 	ConcatDelimiter string `mapstructure:"concat_delimiter"`
+	// MergeCountAttribute is the attribute name used to store the use number of merged log records on the aggregated log record'. Default is "".
+	MergeCountAttribute string `mapstructure:"merge_count_attribute"`
 }
 
 var _ component.Config = (*Config)(nil)

@@ -22,6 +22,7 @@ type mergeState struct {
 	resource  pcommon.Resource
 	scope     pcommon.InstrumentationScope
 	logRecord plog.LogRecord
+	count     int
 }
 
 func newMergeState(r pcommon.Resource, s pcommon.InstrumentationScope, lr plog.LogRecord) mergeState {
@@ -29,22 +30,8 @@ func newMergeState(r pcommon.Resource, s pcommon.InstrumentationScope, lr plog.L
 		resource:  r,
 		scope:     s,
 		logRecord: lr,
+		count:     1,
 	}
-}
-
-func (state mergeState) toLogs() plog.Logs {
-	logs := plog.NewLogs()
-
-	rl := logs.ResourceLogs().AppendEmpty()
-	state.resource.CopyTo(rl.Resource())
-
-	sl := rl.ScopeLogs().AppendEmpty()
-	state.scope.CopyTo(sl.Scope())
-
-	lr := sl.LogRecords().AppendEmpty()
-	state.logRecord.CopyTo(lr)
-
-	return logs
 }
 
 type reduceProcessor struct {
@@ -94,6 +81,9 @@ func (p *reduceProcessor) ConsumeLogs(ctx context.Context, ld plog.Logs) error {
 				// try to get log state from the cache
 				state, ok := p.cache.Get(hash)
 				if ok {
+					// increment state's merge count
+					state.count++
+
 					// state was found in the cache, merge log record with existing state
 					p.mergeLogRecord(state, lr)
 
@@ -188,8 +178,28 @@ func (p *reduceProcessor) mergeLogRecord(state mergeState, lr plog.LogRecord) {
 	attrs.CopyTo(state.logRecord.Attributes())
 }
 
-func (p *reduceProcessor) onEvict(key [16]byte, value mergeState) {
-	lr := value.toLogs()
+func (p *reduceProcessor) toLogs(state mergeState) plog.Logs {
+	logs := plog.NewLogs()
+
+	rl := logs.ResourceLogs().AppendEmpty()
+	state.resource.CopyTo(rl.Resource())
+
+	sl := rl.ScopeLogs().AppendEmpty()
+	state.scope.CopyTo(sl.Scope())
+
+	lr := sl.LogRecords().AppendEmpty()
+	state.logRecord.CopyTo(lr)
+
+	// if merge count attribute is defined, add it to the attributes
+	if p.config.MergeCountAttribute != "" {
+		lr.Attributes().PutInt(p.config.MergeCountAttribute, int64(state.count))
+	}
+
+	return logs
+}
+
+func (p *reduceProcessor) onEvict(key [16]byte, state mergeState) {
+	lr := p.toLogs(state)
 	p.nextConsumer.ConsumeLogs(context.Background(), lr)
 
 	// increment number of output log records
