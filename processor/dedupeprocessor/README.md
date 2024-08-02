@@ -9,17 +9,26 @@ Log records that produce the same hash are dropped.
 
 ### Configuration Options
 
-| Name        | Description                                                                            | Default Value |
-| ----------- | -------------------------------------------------------------------------------------- | ------------- |
-| ttl         | The TTL for log record hashes to live in the cache for expressed as a `time.Duration`. | 30 seconds    |
-| max_entries | The maximum number of entries for the LRU cache.                                       | 1000          |
+| Name | Description | Required | Default Value |
+| - | - | - | - |
+| cache_ttl | The TTL for log record hashes to live in the cache expressed as a `time.Duration`. | No | `30s` (30 seconds) |
+| max_entries | The maximum number of entries for the cache. | No | 1000 |
+| ignore_attributes | A list of attribute name to ignore when calculating a cache entry used to deduplicate log records. | No | `none` |
 
 ### Example configuration
 
-The following is an example of configuring the processor:
+The following is the minimal configuration of the processor and uses default values:
 
 ```yaml
 dedupe:
-  ttl: 1m # 1 minute
-  max_entries: 10_000
+```
+
+The following is an example of configuring the processor with custom values for each option:
+
+```yaml
+dedupe:
+  cache_ttl: 30s
+  max_entries: 1000
+  ignore_attribute:
+    - host.name
 ```
