@@ -32,10 +32,10 @@ func (p *dedupeProcessor) processLogs(ctx context.Context, ld plog.Logs) (plog.L
 			scopeAttrs := p.filterAttributes(sl.Scope().Attributes())
 			scopeAttrsHash := pdatautil.MapHash(scopeAttrs)
 
-			sl.LogRecords().RemoveIf(func(lr plog.LogRecord) bool {
-				// record the number of log records that were received
-				p.telemetryBuilder.DedupeProcessorReceived.Add(ctx, int64(sl.LogRecords().Len()))
+			// record the number of log records that were received
+			p.telemetryBuilder.DedupeProcessorReceived.Add(ctx, int64(sl.LogRecords().Len()))
 
+			sl.LogRecords().RemoveIf(func(lr plog.LogRecord) bool {
 				hash := p.generateHash(resourceAttrsHash, scopeAttrsHash, lr)
 				if p.cache.Contains(hash) {
 					// log record was already in the cache, drop it
