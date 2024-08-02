@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"path/filepath"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/consumer/consumertest"
@@ -74,7 +73,6 @@ func TestProcessLogsDeduplicate(t *testing.T) {
 			cfg := factory.CreateDefaultConfig()
 			oCfg := cfg.(*Config)
 			oCfg.GroupBy = []string{"partition_id"}
-			oCfg.WaitFor = time.Second * 1
 			oCfg.MergeStrategies = tc.mergeStrategies
 			oCfg.MergeCountAttribute = "meta.merge_count"
 
@@ -108,7 +106,6 @@ func TestMaxMergeCountSendsLogsRecord(t *testing.T) {
 	factory := NewFactory()
 	cfg := factory.CreateDefaultConfig().(*Config)
 	cfg.GroupBy = []string{"partition_id"}
-	cfg.WaitFor = time.Second * 10
 	cfg.MaxMergeCount = 1
 
 	sink := new(consumertest.LogsSink)
@@ -132,4 +129,35 @@ func TestMaxMergeCountSendsLogsRecord(t *testing.T) {
 
 		require.NoError(t, plogtest.CompareLogs(expectedLog, actualLog))
 	}
+}
+
+func TestFirstLastSeenAttributes(t *testing.T) {
+	factory := NewFactory()
+	cfg := factory.CreateDefaultConfig().(*Config)
+	cfg.GroupBy = []string{"partition_id"}
+	cfg.FirstSeenAttribute = "meta.first_seen"
+	cfg.LastSeenAttribute = "meta.last_seen"
+
+	sink := new(consumertest.LogsSink)
+	p, err := factory.CreateLogsProcessor(context.Background(), processortest.NewNopSettings(), cfg, sink)
+	require.NoError(t, err)
+
+	input, err := golden.ReadLogs(filepath.Join("testdata", "first-last-seen.yaml"))
+	require.NoError(t, err)
+
+	require.NoError(t, p.ConsumeLogs(context.Background(), input))
+
+	p.(*reduceProcessor).cache.Purge()
+
+	actual := sink.AllLogs()
+	require.Len(t, actual, 1)
+
+	// remove first_seen and last_seen attributes from actual logs so we can compare the remainder
+	require.True(t, actual[0].ResourceLogs().At(0).ScopeLogs().At(0).LogRecords().At(0).Attributes().Remove("meta.first_seen"))
+	require.True(t, actual[0].ResourceLogs().At(0).ScopeLogs().At(0).LogRecords().At(0).Attributes().Remove("meta.last_seen"))
+
+	expected, err := golden.ReadLogs(filepath.Join("testdata", "first-last-seen-expected.yaml"))
+	require.NoError(t, err)
+
+	require.NoError(t, plogtest.CompareLogs(expected, actual[0]))
 }

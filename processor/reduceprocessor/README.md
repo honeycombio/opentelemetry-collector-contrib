@@ -15,6 +15,9 @@
 | merge_strategies | A map of attribute names and merge strategy to use when merging attributes. | No | `none` |
 | concat_delimiter | The default delimitor to use when concategnating attribute values together. | No | `,` |
 | max_merge_count | The maximum number of times a log record can be merged. If the limit is reached, the current aggregate is forwarded and a new aggregate is started. | No | 100 |
+| merge_count_attribute | If specified, the name of the attribute the total number of merge operations was done for the aggreate log record. | No | `none` |
+| first_seen_attribute | If specified, the name of the attribute the received timestamp of the first log record that was merged into the aggregate log record. | No | `none` |
+| last_seen_attribute | If specified, the name of the attribute the received timestamp for the last log record that was merged to add to the log record. Timestamp is stored as a unix  | No | `none` |
 
 ### Example configuration
 
