@@ -210,10 +210,10 @@ func (p *reduceProcessor) toLogs(state *mergeState) plog.Logs {
 		lr.Attributes().PutInt(p.config.MergeCountAttribute, int64(state.count))
 	}
 	if p.config.FirstSeenAttribute != "" {
-		lr.Attributes().PutInt(p.config.FirstSeenAttribute, state.firstSeen.UTC().UnixMilli())
+		lr.Attributes().PutStr(p.config.FirstSeenAttribute, lr.Timestamp().String())
 	}
 	if p.config.LastSeenAttribute != "" {
-		lr.Attributes().PutInt(p.config.LastSeenAttribute, state.lastSeen.UTC().UnixMilli())
+		lr.Attributes().PutStr(p.config.LastSeenAttribute, lr.Timestamp().String())
 	}
 	return logs
 }
