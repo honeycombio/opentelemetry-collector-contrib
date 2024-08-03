@@ -102,8 +102,10 @@ func (p *reduceProcessor) ConsumeLogs(ctx context.Context, ld plog.Logs) error {
 						state.lastSeen = time.Now()
 					}
 
-					// state was found in the cache, merge log record with existing state
-					p.mergeLogRecord(state, lr)
+					// merge resource, scope and log record attributes
+					p.mergeAttributes(state.resource.Attributes(), rl.Resource().Attributes())
+					p.mergeAttributes(state.scope.Attributes(), sl.Scope().Attributes())
+					p.mergeAttributes(state.logRecord.Attributes(), lr.Attributes())
 				} else {
 					// state was not found in the cache, create a new state
 					state = newMergeState(rl.Resource(), sl.Scope(), lr)
@@ -126,17 +128,12 @@ func (p *reduceProcessor) ConsumeLogs(ctx context.Context, ld plog.Logs) error {
 	return nil
 }
 
-func (p *reduceProcessor) mergeLogRecord(state *mergeState, lr plog.LogRecord) {
-	// create new attributes map and ensure it has enough capacity to hold attributes from both
-	// the existing log record and the new log record
-	attrs := pcommon.NewMap()
-	attrs.EnsureCapacity(state.logRecord.Attributes().Len() + lr.Attributes().Len())
-
-	// copy existing attributes
-	state.logRecord.Attributes().CopyTo(attrs)
+func (p *reduceProcessor) mergeAttributes(existingAttrs pcommon.Map, additionalAttrs pcommon.Map) {
+	// ensure attrs has enough capacity to hold additionalAttrs
+	existingAttrs.EnsureCapacity(existingAttrs.Len() + additionalAttrs.Len())
 
 	// loop over new record's attributes and apply merge strategy
-	lr.Attributes().Range(func(attrName string, attrValue pcommon.Value) bool {
+	additionalAttrs.Range(func(attrName string, attrValue pcommon.Value) bool {
 		mergeStrategy, ok := p.config.MergeStrategies[attrName]
 		if !ok {
 			// use default merge strategy if no strategy is defined for the attribute
@@ -146,16 +143,16 @@ func (p *reduceProcessor) mergeLogRecord(state *mergeState, lr plog.LogRecord) {
 		switch mergeStrategy {
 		case First:
 			// add attribute if it doesn't exist
-			_, ok := state.logRecord.Attributes().Get(attrName)
+			_, ok := existingAttrs.Get(attrName)
 			if !ok {
-				attrValue.CopyTo(attrs.PutEmpty(attrName))
+				attrValue.CopyTo(existingAttrs.PutEmpty(attrName))
 			}
 		case Last:
 			// overwrite existing attribute if present
-			attrValue.CopyTo(attrs.PutEmpty(attrName))
+			attrValue.CopyTo(existingAttrs.PutEmpty(attrName))
 		case Array:
 			// append value to existing value if it exists
-			existingValue, ok := state.logRecord.Attributes().Get(attrName)
+			existingValue, ok := existingAttrs.Get(attrName)
 			if ok {
 				// if existing value is a slice, append to it
 				// otherwise, create a new slice and append both values
@@ -170,28 +167,25 @@ func (p *reduceProcessor) mergeLogRecord(state *mergeState, lr plog.LogRecord) {
 					existingValue.CopyTo(slice.AppendEmpty())
 				}
 				attrValue.CopyTo(slice.AppendEmpty())
-				slice.CopyTo(attrs.PutEmptySlice(attrName))
+				slice.CopyTo(existingAttrs.PutEmptySlice(attrName))
 			} else {
 				// add new attribute as it doesn't exist yet
-				attrValue.CopyTo(attrs.PutEmpty(attrName))
+				attrValue.CopyTo(existingAttrs.PutEmpty(attrName))
 			}
 		case Concat:
 			// concatenate value with existing value if it exists
-			existingValue, ok := state.logRecord.Attributes().Get(attrName)
+			existingValue, ok := existingAttrs.Get(attrName)
 			if ok {
 				// concatenate existing value with new value using configured delimiter
 				strValue := strings.Join([]string{existingValue.AsString(), attrValue.AsString()}, p.config.ConcatDelimiter)
-				attrs.PutStr(attrName, strValue)
+				existingAttrs.PutStr(attrName, strValue)
 			} else {
 				// add new attribute as it doesn't exist yet
-				attrValue.CopyTo(attrs.PutEmpty(attrName))
+				attrValue.CopyTo(existingAttrs.PutEmpty(attrName))
 			}
 		}
 		return true
 	})
-
-	// replace attributes in log record
-	attrs.CopyTo(state.logRecord.Attributes())
 }
 
 func (p *reduceProcessor) toLogs(state *mergeState) plog.Logs {
