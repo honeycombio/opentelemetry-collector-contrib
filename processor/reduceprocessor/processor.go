@@ -83,6 +83,9 @@ func (p *reduceProcessor) ConsumeLogs(ctx context.Context, ld plog.Logs) error {
 					return false
 				}
 
+				// increment number of merged log records
+				p.telemetryBuilder.ReduceProcessorMerged.Add(ctx, 1)
+
 				// try to get log state from the cache
 				state, ok := p.cache.Get(hash)
 				if ok {
@@ -101,9 +104,6 @@ func (p *reduceProcessor) ConsumeLogs(ctx context.Context, ld plog.Logs) error {
 
 					// state was found in the cache, merge log record with existing state
 					p.mergeLogRecord(state, lr)
-
-					// increment number of merged log records
-					p.telemetryBuilder.ReduceProcessorMerged.Add(ctx, 1)
 				} else {
 					// state was not found in the cache, create a new state
 					state = newMergeState(rl.Resource(), sl.Scope(), lr)
@@ -111,6 +111,7 @@ func (p *reduceProcessor) ConsumeLogs(ctx context.Context, ld plog.Logs) error {
 				// add state to the cache, replaces existing state if it was found
 				p.cache.Add(hash, state)
 
+				// remove log record from the list as it has been merged
 				return true
 			})
 			return sl.LogRecords().Len() == 0
