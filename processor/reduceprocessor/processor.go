@@ -28,8 +28,8 @@ type mergeState struct {
 	lastSeen  time.Time
 }
 
-func newMergeState(r pcommon.Resource, s pcommon.InstrumentationScope, lr plog.LogRecord) mergeState {
-	return mergeState{
+func newMergeState(r pcommon.Resource, s pcommon.InstrumentationScope, lr plog.LogRecord) *mergeState {
+	return &mergeState{
 		resource:  r,
 		scope:     s,
 		logRecord: lr,
@@ -42,7 +42,7 @@ func newMergeState(r pcommon.Resource, s pcommon.InstrumentationScope, lr plog.L
 type reduceProcessor struct {
 	telemetryBuilder *metadata.TelemetryBuilder
 	nextConsumer     consumer.Logs
-	cache            *expirable.LRU[[16]byte, mergeState]
+	cache            *expirable.LRU[[16]byte, *mergeState]
 	config           *Config
 }
 
@@ -95,7 +95,7 @@ func (p *reduceProcessor) ConsumeLogs(ctx context.Context, ld plog.Logs) error {
 						state = newMergeState(rl.Resource(), sl.Scope(), lr)
 					} else {
 						// increment state's merge count and update last seen time
-						state.count++
+						state.count += 1
 						state.lastSeen = time.Now()
 					}
 
@@ -125,7 +125,7 @@ func (p *reduceProcessor) ConsumeLogs(ctx context.Context, ld plog.Logs) error {
 	return nil
 }
 
-func (p *reduceProcessor) mergeLogRecord(state mergeState, lr plog.LogRecord) {
+func (p *reduceProcessor) mergeLogRecord(state *mergeState, lr plog.LogRecord) {
 	// create new attributes map and ensure it has enough capacity to hold attributes from both
 	// the existing log record and the new log record
 	attrs := pcommon.NewMap()
@@ -193,7 +193,7 @@ func (p *reduceProcessor) mergeLogRecord(state mergeState, lr plog.LogRecord) {
 	attrs.CopyTo(state.logRecord.Attributes())
 }
 
-func (p *reduceProcessor) toLogs(state mergeState) plog.Logs {
+func (p *reduceProcessor) toLogs(state *mergeState) plog.Logs {
 	logs := plog.NewLogs()
 
 	rl := logs.ResourceLogs().AppendEmpty()
@@ -218,7 +218,7 @@ func (p *reduceProcessor) toLogs(state mergeState) plog.Logs {
 	return logs
 }
 
-func (p *reduceProcessor) onEvict(key [16]byte, state mergeState) {
+func (p *reduceProcessor) onEvict(key [16]byte, state *mergeState) {
 	lr := p.toLogs(state)
 	p.nextConsumer.ConsumeLogs(context.Background(), lr)
 

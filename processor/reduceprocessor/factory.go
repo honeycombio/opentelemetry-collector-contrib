@@ -41,7 +41,7 @@ func newReduceLogProcessor(_ context.Context, set processor.Settings, cfg *Confi
 		config:           cfg,
 	}
 
-	cache := expirable.NewLRU[[16]byte, mergeState](cfg.MaxEntries, p.onEvict, cfg.WaitFor)
+	cache := expirable.NewLRU[[16]byte, *mergeState](cfg.MaxEntries, p.onEvict, cfg.WaitFor)
 	p.cache = cache
 
 	return p, nil
