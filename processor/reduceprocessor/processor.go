@@ -19,6 +19,8 @@ import (
 	"github.com/cespare/xxhash/v2"
 )
 
+type cacheKey [16]byte
+
 type mergeState struct {
 	resource  pcommon.Resource
 	scope     pcommon.InstrumentationScope
@@ -42,7 +44,7 @@ func newMergeState(r pcommon.Resource, s pcommon.InstrumentationScope, lr plog.L
 type reduceProcessor struct {
 	telemetryBuilder *metadata.TelemetryBuilder
 	nextConsumer     consumer.Logs
-	cache            *expirable.LRU[[16]byte, *mergeState]
+	cache            *expirable.LRU[cacheKey, *mergeState]
 	config           *Config
 }
 
@@ -65,20 +67,20 @@ func (p *reduceProcessor) Shutdown(ctx context.Context) error {
 func (p *reduceProcessor) ConsumeLogs(ctx context.Context, ld plog.Logs) error {
 	ld.ResourceLogs().RemoveIf(func(rl plog.ResourceLogs) bool {
 		// generate hash for resource attributes
-		resourceAttrsHash := pdatautil.MapHash(rl.Resource().Attributes())
+		resourceAttrs := rl.Resource().Attributes()
 
 		rl.ScopeLogs().RemoveIf(func(sl plog.ScopeLogs) bool {
 			// increment number of received log records
 			p.telemetryBuilder.ReduceProcessorReceived.Add(ctx, int64(sl.LogRecords().Len()))
 
 			// generate hash for scope attributes
-			scopeAttrsHash := pdatautil.MapHash(sl.Scope().Attributes())
+			scopeAttrs := sl.Scope().Attributes()
 
 			sl.LogRecords().RemoveIf(func(lr plog.LogRecord) bool {
 				// generate hash for log record using group by attributes
 				// keep being true means we can aggregate the log record
 				// keep being false means we can't aggregate the log record
-				hash, keep := p.generateHash(resourceAttrsHash, scopeAttrsHash, lr)
+				hash, keep := p.generateHash(resourceAttrs, scopeAttrs, lr)
 				if !keep {
 					return false
 				}
@@ -213,7 +215,7 @@ func (p *reduceProcessor) toLogs(state *mergeState) plog.Logs {
 	return logs
 }
 
-func (p *reduceProcessor) onEvict(key [16]byte, state *mergeState) {
+func (p *reduceProcessor) onEvict(key cacheKey, state *mergeState) {
 	lr := p.toLogs(state)
 	p.nextConsumer.ConsumeLogs(context.Background(), lr)
 
@@ -226,29 +228,38 @@ func (p *reduceProcessor) Flush(context.Context) error {
 	return nil
 }
 
-func (p *reduceProcessor) generateHash(resourceHash [16]byte, scopeHash [16]byte, lr plog.LogRecord) ([16]byte, bool) {
+func (p *reduceProcessor) generateHash(resourceAttrs pcommon.Map, scopeAttrs pcommon.Map, lr plog.LogRecord) (cacheKey, bool) {
 	// get all group by attributes from log record
 	groupByAttrs := pcommon.NewMap()
 	groupByAttrs.EnsureCapacity(len(p.config.GroupBy))
 	for _, attrName := range p.config.GroupBy {
+		// try to find each attribute in log record, scope and resource
+		// done in reverse order so that log record attributes take precedence
+		// over scope attributes and scope attributes take precedence over resource attributes
 		attr, ok := lr.Attributes().Get(attrName)
 		if ok {
+			attr.CopyTo(groupByAttrs.PutEmpty(attrName))
+			continue
+		}
+		if attr, ok = scopeAttrs.Get(attrName); ok {
+			attr.CopyTo(groupByAttrs.PutEmpty(attrName))
+			continue
+		}
+		if attr, ok = resourceAttrs.Get(attrName); ok {
 			attr.CopyTo(groupByAttrs.PutEmpty(attrName))
 		}
 	}
 
-	var key [16]byte
+	var key cacheKey
 	if groupByAttrs.Len() == 0 {
 		return key, false
 	}
 
-	// generate hash for group key
+	// generate hash for group by attrs
 	groupByAttrsHash := pdatautil.MapHash(groupByAttrs)
 
 	// generate hash for log record
 	hash := xxhash.New()
-	hash.Write(resourceHash[:])
-	hash.Write(scopeHash[:])
 	hash.Write(groupByAttrsHash[:])
 	hash.Write([]byte(lr.Body().AsString()))
 	hash.Write([]byte(lr.SeverityText()))
