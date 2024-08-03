@@ -65,6 +65,11 @@ func TestProcessLogsDeduplicate(t *testing.T) {
 			expectedFile:       "skip-aggregation-expected.yaml",
 			numLogsBeforeFlush: 1,
 		},
+		{
+			name:         "duplicate attributes",
+			inputFile:    "duplicate-attrs.yaml",
+			expectedFile: "duplicate-attrs-expected.yaml",
+		},
 	}
 
 	for _, tc := range testCases {
