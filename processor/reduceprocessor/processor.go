@@ -3,7 +3,6 @@ package reduceprocessor
 import (
 	"context"
 	"strings"
-	"time"
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"
@@ -27,8 +26,8 @@ type mergeState struct {
 	scope     pcommon.InstrumentationScope
 	logRecord plog.LogRecord
 	count     int
-	firstSeen time.Time
-	lastSeen  time.Time
+	firstSeen pcommon.Timestamp
+	lastSeen  pcommon.Timestamp
 }
 
 func newMergeState(r pcommon.Resource, s pcommon.InstrumentationScope, lr plog.LogRecord) *mergeState {
@@ -37,8 +36,8 @@ func newMergeState(r pcommon.Resource, s pcommon.InstrumentationScope, lr plog.L
 		scope:     s,
 		logRecord: lr,
 		count:     1,
-		firstSeen: time.Now(),
-		lastSeen:  time.Now(),
+		firstSeen: lr.Timestamp(),
+		lastSeen:  lr.Timestamp(),
 	}
 }
 
@@ -115,7 +114,7 @@ func (p *reduceProcessor) ConsumeLogs(ctx context.Context, ld plog.Logs) error {
 					} else {
 						// increment merge state's count and update last seen time
 						state.count += 1
-						state.lastSeen = time.Now()
+						state.lastSeen = lr.Timestamp()
 					}
 
 					// merge resource, scope and log record attributes
@@ -223,10 +222,10 @@ func (p *reduceProcessor) toLogs(state *mergeState) plog.Logs {
 		lr.Attributes().PutInt(p.config.MergeCountAttribute, int64(state.count))
 	}
 	if p.config.FirstSeenAttribute != "" {
-		lr.Attributes().PutStr(p.config.FirstSeenAttribute, lr.Timestamp().String())
+		lr.Attributes().PutStr(p.config.FirstSeenAttribute, state.firstSeen.String())
 	}
 	if p.config.LastSeenAttribute != "" {
-		lr.Attributes().PutStr(p.config.LastSeenAttribute, lr.Timestamp().String())
+		lr.Attributes().PutStr(p.config.LastSeenAttribute, state.lastSeen.String())
 	}
 	return logs
 }
