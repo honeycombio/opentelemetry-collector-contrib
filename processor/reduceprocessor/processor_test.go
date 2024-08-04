@@ -97,8 +97,8 @@ func TestProcessLogsDeduplicate(t *testing.T) {
 			actual := sink.AllLogs()
 			require.Len(t, actual, tc.numLogsBeforeFlush)
 
-			// flush the cache to evit all entries, causing logs to be emitted
-			p.(*reduceProcessor).cache.Purge()
+			// shutdown flushes the cache to evit all entries, causing logs to be emitted
+			p.Shutdown(context.Background())
 			actual = sink.AllLogs()
 			require.Len(t, actual, 1)
 

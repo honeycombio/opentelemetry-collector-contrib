@@ -71,8 +71,8 @@ func (p *reduceProcessor) Start(context.Context, component.Host) error {
 	return nil
 }
 
-func (p *reduceProcessor) Shutdown(ctx context.Context) error {
-	p.Flush(ctx)
+func (p *reduceProcessor) Shutdown(_ context.Context) error {
+	p.cache.Purge()
 	return nil
 }
 
@@ -239,11 +239,6 @@ func (p *reduceProcessor) onEvict(key cacheKey, state *mergeState) {
 
 	// increment number of output log records
 	p.telemetryBuilder.ReduceProcessorOutput.Add(context.Background(), 1)
-}
-
-func (p *reduceProcessor) Flush(context.Context) error {
-	p.cache.Purge()
-	return nil
 }
 
 func (p *reduceProcessor) generateHash(resourceAttrs pcommon.Map, scopeAttrs pcommon.Map, lr plog.LogRecord) (cacheKey, bool) {
