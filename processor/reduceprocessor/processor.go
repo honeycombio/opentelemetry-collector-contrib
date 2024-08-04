@@ -21,7 +21,7 @@ import (
 
 type cacheKey [16]byte
 
-type mergeState struct {
+type reduceState struct {
 	resource  pcommon.Resource
 	scope     pcommon.InstrumentationScope
 	logRecord plog.LogRecord
@@ -30,8 +30,8 @@ type mergeState struct {
 	lastSeen  pcommon.Timestamp
 }
 
-func newMergeState(r pcommon.Resource, s pcommon.InstrumentationScope, lr plog.LogRecord) *mergeState {
-	return &mergeState{
+func newMergeState(r pcommon.Resource, s pcommon.InstrumentationScope, lr plog.LogRecord) *reduceState {
+	return &reduceState{
 		resource:  r,
 		scope:     s,
 		logRecord: lr,
@@ -45,7 +45,7 @@ type reduceProcessor struct {
 	telemetryBuilder *metadata.TelemetryBuilder
 	nextConsumer     consumer.Logs
 	logger           *zap.Logger
-	cache            *expirable.LRU[cacheKey, *mergeState]
+	cache            *expirable.LRU[cacheKey, *reduceState]
 	config           *Config
 	groupByAttrsLen  int
 }
@@ -205,7 +205,7 @@ func (p *reduceProcessor) mergeAttributes(existingAttrs pcommon.Map, additionalA
 	})
 }
 
-func (p *reduceProcessor) toLogs(state *mergeState) plog.Logs {
+func (p *reduceProcessor) toLogs(state *reduceState) plog.Logs {
 	logs := plog.NewLogs()
 
 	rl := logs.ResourceLogs().AppendEmpty()
@@ -230,7 +230,7 @@ func (p *reduceProcessor) toLogs(state *mergeState) plog.Logs {
 	return logs
 }
 
-func (p *reduceProcessor) onEvict(key cacheKey, state *mergeState) {
+func (p *reduceProcessor) onEvict(key cacheKey, state *reduceState) {
 	// send merged log record to next consumer
 	logs := p.toLogs(state)
 	if err := p.nextConsumer.ConsumeLogs(context.Background(), logs); err != nil {

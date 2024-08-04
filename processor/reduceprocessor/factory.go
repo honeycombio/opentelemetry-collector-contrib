@@ -36,7 +36,7 @@ func newReduceLogProcessor(_ context.Context, set processor.Settings, cfg *Confi
 	}
 
 	p := newReduceProcessor(telemetryBuilder, nextConsumer, set.Logger, cfg)
-	cache := expirable.NewLRU[cacheKey, *mergeState](cfg.MaxEntries, p.onEvict, cfg.WaitFor)
+	cache := expirable.NewLRU[cacheKey, *reduceState](cfg.MaxEntries, p.onEvict, cfg.WaitFor)
 	p.cache = cache
 
 	return p, nil
