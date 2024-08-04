@@ -3,6 +3,7 @@ package reduceprocessor
 import (
 	"context"
 	"strings"
+	"time"
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"
@@ -22,6 +23,7 @@ import (
 type cacheKey [16]byte
 
 type reduceState struct {
+	createdAt time.Time
 	resource  pcommon.Resource
 	scope     pcommon.InstrumentationScope
 	logRecord plog.LogRecord
@@ -30,8 +32,9 @@ type reduceState struct {
 	lastSeen  pcommon.Timestamp
 }
 
-func newMergeState(r pcommon.Resource, s pcommon.InstrumentationScope, lr plog.LogRecord) *reduceState {
+func newReduceState(r pcommon.Resource, s pcommon.InstrumentationScope, lr plog.LogRecord) *reduceState {
 	return &reduceState{
+		createdAt: time.Now(),
 		resource:  r,
 		scope:     s,
 		logRecord: lr,
@@ -39,6 +42,16 @@ func newMergeState(r pcommon.Resource, s pcommon.InstrumentationScope, lr plog.L
 		firstSeen: lr.Timestamp(),
 		lastSeen:  lr.Timestamp(),
 	}
+}
+
+func (s *reduceState) shouldEvict(maxCount int, maxAge time.Duration) bool {
+	if s.count >= maxCount {
+		return true
+	}
+	if maxAge > 0 && time.Since(s.createdAt) >= maxAge {
+		return true
+	}
+	return false
 }
 
 type reduceProcessor struct {
@@ -82,7 +95,7 @@ func (p *reduceProcessor) ConsumeLogs(ctx context.Context, ld plog.Logs) error {
 		resourceAttrs := rl.Resource().Attributes()
 
 		rl.ScopeLogs().RemoveIf(func(sl plog.ScopeLogs) bool {
-			// increment number of received log records, this doesn't mean they will be merged
+			// increment number of received log records, this doesn't mean they will be reduced
 			p.telemetryBuilder.ReduceProcessorReceived.Add(ctx, int64(sl.LogRecords().Len()))
 
 			// get scope attributes
@@ -98,37 +111,35 @@ func (p *reduceProcessor) ConsumeLogs(ctx context.Context, ld plog.Logs) error {
 					return false
 				}
 
-				// increment number of merged log records
+				// increment number of reduced log records
 				p.telemetryBuilder.ReduceProcessorMerged.Add(ctx, 1)
 
-				// try to get log merge state from the cache
+				// try to get reduce state from the cache
 				state, ok := p.cache.Get(hash)
-				if ok {
-					// check if the state has reached the maximum number of log records to merge
-					if state.count >= p.config.MaxMergeCount {
-						// remove it from the cache to force it to be evicted and sent to the next consumer
-						p.cache.Remove(hash)
+				if !ok {
+					// state was not found in the cache, create a new state
+					state = newReduceState(rl.Resource(), sl.Scope(), lr)
+				} else if state.shouldEvict(p.config.MaxReduceCount, p.config.MaxReduceTimeout) {
+					// remove it from the cache to force it to be evicted and sent to the next consumer
+					p.cache.Remove(hash)
 
-						// crete a new merge state
-						state = newMergeState(rl.Resource(), sl.Scope(), lr)
-					} else {
-						// increment merge state's count and update last seen time
-						state.count += 1
-						state.lastSeen = lr.Timestamp()
-					}
+					// crete a new reduce state
+					state = newReduceState(rl.Resource(), sl.Scope(), lr)
+				} else {
+					// increment reduce state's count and update last seen time
+					state.count += 1
+					state.lastSeen = lr.Timestamp()
 
 					// merge resource, scope and log record attributes
 					p.mergeAttributes(state.resource.Attributes(), rl.Resource().Attributes())
 					p.mergeAttributes(state.scope.Attributes(), sl.Scope().Attributes())
 					p.mergeAttributes(state.logRecord.Attributes(), lr.Attributes())
-				} else {
-					// state was not found in the cache, create a new state
-					state = newMergeState(rl.Resource(), sl.Scope(), lr)
 				}
+
 				// add state to the cache, replaces existing state if it was found
 				p.cache.Add(hash, state)
 
-				// remove log record as it has been merged
+				// remove log record as it has been aggregated
 				return true
 			})
 			return sl.LogRecords().Len() == 0
@@ -154,7 +165,7 @@ func (p *reduceProcessor) mergeAttributes(existingAttrs pcommon.Map, additionalA
 		mergeStrategy, ok := p.config.MergeStrategies[attrName]
 		if !ok {
 			// use default merge strategy if no strategy is defined for the attribute
-			mergeStrategy = p.config.DefaultMergeStrategy
+			mergeStrategy = First
 		}
 
 		switch mergeStrategy {
@@ -194,7 +205,7 @@ func (p *reduceProcessor) mergeAttributes(existingAttrs pcommon.Map, additionalA
 			existingValue, ok := existingAttrs.Get(attrName)
 			if ok {
 				// concatenate existing value with new value using configured delimiter
-				strValue := strings.Join([]string{existingValue.AsString(), attrValue.AsString()}, p.config.ConcatDelimiter)
+				strValue := strings.Join([]string{existingValue.AsString(), attrValue.AsString()}, ",")
 				existingAttrs.PutStr(attrName, strValue)
 			} else {
 				// add new attribute as it doesn't exist yet
@@ -218,8 +229,8 @@ func (p *reduceProcessor) toLogs(state *reduceState) plog.Logs {
 	state.logRecord.CopyTo(lr)
 
 	// add merge count, first seen and last seen attributes if configured
-	if p.config.MergeCountAttribute != "" {
-		lr.Attributes().PutInt(p.config.MergeCountAttribute, int64(state.count))
+	if p.config.ReduceCountAttribute != "" {
+		lr.Attributes().PutInt(p.config.ReduceCountAttribute, int64(state.count))
 	}
 	if p.config.FirstSeenAttribute != "" {
 		lr.Attributes().PutStr(p.config.FirstSeenAttribute, state.firstSeen.String())
@@ -231,7 +242,7 @@ func (p *reduceProcessor) toLogs(state *reduceState) plog.Logs {
 }
 
 func (p *reduceProcessor) onEvict(key cacheKey, state *reduceState) {
-	// send merged log record to next consumer
+	// send aggregated log record to next consumer
 	logs := p.toLogs(state)
 	if err := p.nextConsumer.ConsumeLogs(context.Background(), logs); err != nil {
 		p.logger.Error("failed to send logs to next consumer", zap.Error(err))

@@ -16,13 +16,15 @@ import (
 // createDefaultConfig creates the default configuration for the processor.
 func createDefaultConfig() component.Config {
 	return &Config{
-		WaitFor:              time.Second * 10,
-		MaxEntries:           1000,
 		GroupBy:              []string{},
-		DefaultMergeStrategy: First,
+		ReduceTimeout:        time.Second * 10,
+		MaxReduceTimeout:     time.Second * 60,
+		MaxReduceCount:       100,
+		CacheSize:            10_000,
 		MergeStrategies:      map[string]MergeStrategy{},
-		ConcatDelimiter:      ",",
-		MaxMergeCount:        100,
+		ReduceCountAttribute: "",
+		FirstSeenAttribute:   "",
+		LastSeenAttribute:    "",
 	}
 }
 
@@ -36,7 +38,7 @@ func newReduceLogProcessor(_ context.Context, set processor.Settings, cfg *Confi
 	}
 
 	p := newReduceProcessor(telemetryBuilder, nextConsumer, set.Logger, cfg)
-	cache := expirable.NewLRU[cacheKey, *reduceState](cfg.MaxEntries, p.onEvict, cfg.WaitFor)
+	cache := expirable.NewLRU[cacheKey, *reduceState](cfg.CacheSize, p.onEvict, cfg.ReduceTimeout)
 	p.cache = cache
 
 	return p, nil

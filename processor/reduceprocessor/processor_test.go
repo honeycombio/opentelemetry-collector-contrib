@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/consumer/consumertest"
@@ -79,7 +80,7 @@ func TestProcessLogsDeduplicate(t *testing.T) {
 			oCfg := cfg.(*Config)
 			oCfg.GroupBy = []string{"partition_id"}
 			oCfg.MergeStrategies = tc.mergeStrategies
-			oCfg.MergeCountAttribute = "meta.merge_count"
+			oCfg.ReduceCountAttribute = "meta.merge_count"
 
 			sink := new(consumertest.LogsSink)
 			p, err := factory.CreateLogsProcessor(context.Background(), processortest.NewNopSettings(), oCfg, sink)
@@ -111,7 +112,7 @@ func TestMaxMergeCountSendsLogsRecord(t *testing.T) {
 	factory := NewFactory()
 	cfg := factory.CreateDefaultConfig().(*Config)
 	cfg.GroupBy = []string{"partition_id"}
-	cfg.MaxMergeCount = 1
+	cfg.MaxReduceCount = 1
 
 	sink := new(consumertest.LogsSink)
 	p, err := factory.CreateLogsProcessor(context.Background(), processortest.NewNopSettings(), cfg, sink)
@@ -165,4 +166,60 @@ func TestFirstLastSeenAttributes(t *testing.T) {
 	require.NoError(t, err)
 
 	require.NoError(t, plogtest.CompareLogs(expected, actual[0]))
+}
+
+func TestReduceStateShouldEvict(t *testing.T) {
+	testCases := []struct {
+		name      string
+		count     int
+		createdAt time.Time
+		maxCount  int
+		maxAge    time.Duration
+		expected  bool
+	}{
+		{
+			name:     "returns true when count is greater than max count",
+			count:    5,
+			maxCount: 2,
+			expected: true,
+		},
+		{
+			name:     "returns true when count is equal to max count",
+			count:    2,
+			maxCount: 2,
+			expected: true,
+		},
+		{
+			name:     "returns false when count is less than max count",
+			count:    1,
+			maxCount: 2,
+			expected: false,
+		},
+		{
+			name:      "returns true when max age is set and state is older than max age",
+			count:     1,
+			maxCount:  2,
+			createdAt: time.Now().Add(-2 * time.Second),
+			maxAge:    1 * time.Second,
+			expected:  true,
+		},
+		{
+			name:      "returns false when max age is set and state is younger than max age",
+			count:     1,
+			maxCount:  2,
+			createdAt: time.Now(),
+			maxAge:    1 * time.Second,
+			expected:  false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			state := reduceState{
+				count:     tc.count,
+				createdAt: tc.createdAt,
+			}
+			require.Equal(t, tc.expected, state.shouldEvict(tc.maxCount, tc.maxAge))
+		})
+	}
 }

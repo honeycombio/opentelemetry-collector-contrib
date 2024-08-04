@@ -17,25 +17,31 @@ const (
 )
 
 type Config struct {
-	// WaitFor is the amount of time to wait after the last log record was received before passing it onto the next component in the pipeline. Default is 10s.
-	WaitFor time.Duration `mapstructure:"wait_for"`
-	// MaxEntries is the maximum number of entries that can be stored in the cache. Default is 1000.
-	MaxEntries int `mapstructure:"max_entries"`
-	// GroupBy is the list of attribute names to be used to identify unique log records.
+	// GroupBy is the list of attribute names used to group log records together.
 	GroupBy []string `mapstructure:"group_by"`
-	// MergeStrategies is a map of attribute names and merge strategy's to use when merging log records. DefaultMergeStrategy is used when no strategy is defined for an attribute.
-	MergeStrategies map[string]MergeStrategy `mapstructure:"merge_strategy"`
-	// DefaultMergeStrategy is the strategy to use when no merge strategy is defined for an attribute. Default is "first".
-	DefaultMergeStrategy MergeStrategy `mapstructure:"default_merge_strategy"`
-	// ConcatDelimiter is the delimiter to use when merging attributes with the "concat" strategy. Default is ",".
-	ConcatDelimiter string `mapstructure:"concat_delimiter"`
-	// MaxMergeCount is the maximum number of log records that can be merged into a single aggregated log record. Default is 100.
-	MaxMergeCount int `mapstructure:"max_merge_count"`
-	// MergeCountAttribute is the attribute name used to store the use number of merged log records on the aggregated log record'. Default is "".
-	MergeCountAttribute string `mapstructure:"merge_count_attribute"`
-	// FirstSeenAttribute is the attribute name used to store the first seen time of the aggregated log record. Default is "".
+
+	// ReduceTimeout is the amount of time to wait after the last log record before considering the log record is complete and ready to sent to the next consumer. Default is 10s.
+	ReduceTimeout time.Duration `mapstructure:"reduce_timeout"`
+
+	// MaxReduceTimeout is the maximum amount of time an aggregated log record can be stored in the cache before being sent to the next consumer. Default is 60s.
+	MaxReduceTimeout time.Duration `mapstructure:"max_reduce_timeout"`
+
+	// MaxReduceCount is the maximum number of log records that can be aggregated together. Once this limit is reached, the aggregated log record is sent to the next consumer and a new aggregated log record is created. Default is 100.
+	MaxReduceCount int `mapstructure:"max_reduce_count"`
+
+	// CacheSize is the maximum number of entries that can be stored in the cache. Default is 10000.
+	CacheSize int `mapstructure:"cache_size"`
+
+	// MergeStrategies is a map of attribute names to their merge strategies. If an attribute is not found in the map, the default merge strategy of First is used.
+	MergeStrategies map[string]MergeStrategy `mapstructure:"merge_strategies"`
+
+	// ReduceCountAttribute is the attribute name used to store the count of log records on the aggregated log record'. If empty, the count is not stored. Default is "".
+	ReduceCountAttribute string `mapstructure:"reduce_count_attribute"`
+
+	// FirstSeenAttribute is the attribute name used to store the first seen time of the aggregated log record. If empty, the first seen time is not stored. Default is "".
 	FirstSeenAttribute string `mapstructure:"first_seen_attribute"`
-	// LastSeenAttribute is the attribute name used to store the last seen time of the aggregated log record. Default is "".
+
+	// LastSeenAttribute is the attribute name used to store the last seen time of the aggregated log record. If empty, the last seen time is not stored. Default is "".
 	LastSeenAttribute string `mapstructure:"last_seen_attribute"`
 }
 
