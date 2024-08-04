@@ -255,14 +255,16 @@ func (p *reduceProcessor) generateHash(resourceAttrs pcommon.Map, scopeAttrs pco
 		return key, false
 	}
 
-	// generate hash for group by attrs
+	// generate hashes for group by attrs, body and severity
 	groupByAttrsHash := pdatautil.MapHash(groupByAttrs)
+	bodyHash := pdatautil.ValueHash(lr.Body())
+	severityHash := pdatautil.ValueHash(pcommon.NewValueStr(lr.SeverityText()))
 
 	// generate hash for log record
 	hash := xxhash.New()
 	hash.Write(groupByAttrsHash[:])
-	hash.Write([]byte(lr.Body().AsString()))
-	hash.Write([]byte(lr.SeverityText()))
+	hash.Write(bodyHash[:])
+	hash.Write(severityHash[:])
 
 	copy(key[:], hash.Sum(nil))
 	return key, true
