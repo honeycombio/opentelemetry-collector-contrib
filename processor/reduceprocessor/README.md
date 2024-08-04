@@ -4,20 +4,28 @@
 
 // TODO
 
-### Configuration Options
+## Configuration Options
 
 | Name | Description | Required | Default Value | 
 | - | - | - | - |
-| group_by | A list of attribute names to be used to identify log records that should be grouped and merged together. | Yes | `none` |
-| wait_for | The amount of time to wait after the last log record was received before passing it onto the next component in the pipeline. | No | `10s` (10 seconds) |
-| max_entries | The maximum number of entries for the LRU cache. | No | `10000` |
-| default_merge_strategy | The default merge strategy to use when a custom one has not been defined. | No | `Last` |
-| merge_strategies | A map of attribute names and merge strategy to use when merging attributes. | No | `none` |
-| concat_delimiter | The default delimitor to use when concategnating attribute values together. | No | `,` |
-| max_merge_count | The maximum number of times a log record can be merged. If the limit is reached, the current aggregate is forwarded and a new aggregate is started. | No | 100 |
-| merge_count_attribute | If specified, the name of the attribute the total number of merge operations was done for the aggreate log record. | No | `none` |
-| first_seen_attribute | If specified, the name of the attribute the received timestamp of the first log record that was merged into the aggregate log record. | No | `none` |
-| last_seen_attribute | If specified, the name of the attribute the received timestamp for the last log record that was merged to add to the log record. Timestamp is stored as a unix  | No | `none` |
+| group_by | The list of attribute names used to group and aggregate log records. At least one attribute name is required. | Yes | `none` |
+| reduce_timeout | The amount of time to wait after the last log record was received before an aggreated log record should be considered complete. | No | `10s` |
+| max_reduce_timeout | The maximum amount of time an aggregated log record can be stored in the cache before it should be considered complete. | No | `60s` |
+| max_reduce_count | The maximum number of log records that can be aggregated together. If the maximum is reached, the current aggregated log record is considered complete and a new aggregated log record is created. | No | `100` |
+| cache_size | The maximum number of entries that can be stored in the cache. | No | `10000` |
+| merge_strategies | A map of attribute names to a custom merge strategies. If an attribute is not found in the map, the default merge strategy of `First` is used. | No | `none` |
+| reduce_count_attribute | The the attribute name used to store the count of log records on the aggregated log record'. If empty, the count is not stored. | No | `none` |
+| first_seen_attribute | The attribute name used to store the timestamp of the first log record in the aggregated log record. If empty, the last seen time is not stored. | No | `none` |
+| last_seen_attribute | The attribute name used to store the timestamp of the last log record in the aggregated log record. If empty, the last seen time is not stored. | No | `none` |
+
+### Merge Strategies
+
+| Name | Description |
+| - | - |
+| First | Keeps the first non-empty value. |
+| Last | Keeps the last non-empty value. |
+| Array | Combines multiple values into an array. |
+| Concat | Concatenates each non-empty value together with a comma `,`. |
 
 ### Example configuration
 
@@ -35,12 +43,14 @@ The following is a complete configuration of the processor:
 reduce:
   group_by:
     - "host.name"
-  wait_for: 10s
-  max_entries: 1000
-  default_merge_strategy: first
+  reduce_timeout: 10s
+  max_reduce_timeout: 60s
+  max_reduce_count: 100
+  cache_size: 10000
   merge_strategies:
     "some-attribute": first
     "another-attribute": last
-  concat-delimiter: ","
-  max_merge_count: 100
+  reduce_count_attribute: reduce_count
+  first_seen_attribute: first_timestamp
+  last_seen_attribute: last_timestamp
 ```
