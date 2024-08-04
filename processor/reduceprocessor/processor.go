@@ -48,10 +48,21 @@ type reduceProcessor struct {
 	logger           *zap.Logger
 	cache            *expirable.LRU[cacheKey, *mergeState]
 	config           *Config
+	groupByAttrsLen  int
 }
 
 var _ consumer.Logs = (*reduceProcessor)(nil)
 var _ processor.Logs = (*reduceProcessor)(nil)
+
+func newReduceProcessor(telemetryBuilder *metadata.TelemetryBuilder, nextConsumer consumer.Logs, logger *zap.Logger, cfg *Config) *reduceProcessor {
+	return &reduceProcessor{
+		telemetryBuilder: telemetryBuilder,
+		nextConsumer:     nextConsumer,
+		logger:           logger,
+		config:           cfg,
+		groupByAttrsLen:  len(cfg.GroupBy),
+	}
+}
 
 func (p *reduceProcessor) Capabilities() consumer.Capabilities {
 	return consumer.Capabilities{MutatesData: true}
@@ -239,7 +250,7 @@ func (p *reduceProcessor) Flush(context.Context) error {
 func (p *reduceProcessor) generateHash(resourceAttrs pcommon.Map, scopeAttrs pcommon.Map, lr plog.LogRecord) (cacheKey, bool) {
 	// create a map to hold group by attributes
 	groupByAttrs := pcommon.NewMap()
-	groupByAttrs.EnsureCapacity(len(p.config.GroupBy))
+	groupByAttrs.EnsureCapacity(p.groupByAttrsLen)
 
 	// loop over group by attributes and try to find them in log record, scope and resource
 	for _, attrName := range p.config.GroupBy {
