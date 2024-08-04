@@ -68,20 +68,21 @@ func (p *reduceProcessor) Shutdown(ctx context.Context) error {
 
 func (p *reduceProcessor) ConsumeLogs(ctx context.Context, ld plog.Logs) error {
 	ld.ResourceLogs().RemoveIf(func(rl plog.ResourceLogs) bool {
-		// generate hash for resource attributes
+		// get resource attributes
 		resourceAttrs := rl.Resource().Attributes()
 
 		rl.ScopeLogs().RemoveIf(func(sl plog.ScopeLogs) bool {
-			// increment number of received log records
+			// increment number of received log records, this doesn't mean they will be merged
 			p.telemetryBuilder.ReduceProcessorReceived.Add(ctx, int64(sl.LogRecords().Len()))
 
-			// generate hash for scope attributes
+			// get scope attributes
 			scopeAttrs := sl.Scope().Attributes()
 
 			sl.LogRecords().RemoveIf(func(lr plog.LogRecord) bool {
-				// generate hash for log record using group by attributes
-				// keep being true means we can aggregate the log record
-				// keep being false means we can't aggregate the log record
+				// generate hash for log record using resource, scope and log record attributes
+				// returns whether the log record should be kept or not
+				// true means we can aggregate the log record
+				// false means we can't aggregate the log record
 				hash, keep := p.generateHash(resourceAttrs, scopeAttrs, lr)
 				if !keep {
 					return false
@@ -90,7 +91,7 @@ func (p *reduceProcessor) ConsumeLogs(ctx context.Context, ld plog.Logs) error {
 				// increment number of merged log records
 				p.telemetryBuilder.ReduceProcessorMerged.Add(ctx, 1)
 
-				// try to get log state from the cache
+				// try to get log merge state from the cache
 				state, ok := p.cache.Get(hash)
 				if ok {
 					// check if the state has reached the maximum number of log records to merge
@@ -101,7 +102,7 @@ func (p *reduceProcessor) ConsumeLogs(ctx context.Context, ld plog.Logs) error {
 						// crete a new merge state
 						state = newMergeState(rl.Resource(), sl.Scope(), lr)
 					} else {
-						// increment state's merge count and update last seen time
+						// increment merge state's count and update last seen time
 						state.count += 1
 						state.lastSeen = time.Now()
 					}
@@ -117,7 +118,7 @@ func (p *reduceProcessor) ConsumeLogs(ctx context.Context, ld plog.Logs) error {
 				// add state to the cache, replaces existing state if it was found
 				p.cache.Add(hash, state)
 
-				// remove log record from the list as it has been merged
+				// remove log record as it has been merged
 				return true
 			})
 			return sl.LogRecords().Len() == 0
@@ -126,18 +127,20 @@ func (p *reduceProcessor) ConsumeLogs(ctx context.Context, ld plog.Logs) error {
 	})
 
 	// pass any remaining log records to the next consumer
-	if ld.ResourceLogs().Len() > 0 {
+	if ld.LogRecordCount() > 0 {
 		return p.nextConsumer.ConsumeLogs(ctx, ld)
 	}
 	return nil
 }
 
 func (p *reduceProcessor) mergeAttributes(existingAttrs pcommon.Map, additionalAttrs pcommon.Map) {
-	// ensure attrs has enough capacity to hold additionalAttrs
+	// ensure existing attributes has enough capacity to hold additional attributes
+	// TODO: this is not efficient, we should determine number of unique attributes and ensure capacity based on that
 	existingAttrs.EnsureCapacity(existingAttrs.Len() + additionalAttrs.Len())
 
-	// loop over new record's attributes and apply merge strategy
+	// loop over new attributes and apply merge strategy
 	additionalAttrs.Range(func(attrName string, attrValue pcommon.Value) bool {
+		// get merge strategy using attribute name
 		mergeStrategy, ok := p.config.MergeStrategies[attrName]
 		if !ok {
 			// use default merge strategy if no strategy is defined for the attribute
@@ -234,9 +237,11 @@ func (p *reduceProcessor) Flush(context.Context) error {
 }
 
 func (p *reduceProcessor) generateHash(resourceAttrs pcommon.Map, scopeAttrs pcommon.Map, lr plog.LogRecord) (cacheKey, bool) {
-	// get all group by attributes from log record
+	// create a map to hold group by attributes
 	groupByAttrs := pcommon.NewMap()
 	groupByAttrs.EnsureCapacity(len(p.config.GroupBy))
+
+	// loop over group by attributes and try to find them in log record, scope and resource
 	for _, attrName := range p.config.GroupBy {
 		// try to find each attribute in log record, scope and resource
 		// done in reverse order so that log record attributes take precedence
