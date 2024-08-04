@@ -6,21 +6,21 @@
 
 The following telemetry is emitted by this component.
 
-### reduce_processor_merged
+### reduce_processor_aggregated
 
-Number of log events that were merged
+Number of log events that were aggregated
 
 | Unit | Metric Type | Value Type | Monotonic |
 | ---- | ----------- | ---------- | --------- |
-| 1 | Sum | Int | true |
+| {records} | Sum | Int | true |
 
 ### reduce_processor_output
 
-Number of log events output
+Number of aggreated log events output
 
 | Unit | Metric Type | Value Type | Monotonic |
 | ---- | ----------- | ---------- | --------- |
-| 1 | Sum | Int | true |
+| {records} | Sum | Int | true |
 
 ### reduce_processor_received
 
@@ -28,4 +28,4 @@ Number of log events received
 
 | Unit | Metric Type | Value Type | Monotonic |
 | ---- | ----------- | ---------- | --------- |
-| 1 | Sum | Int | true |
+| {records} | Sum | Int | true |

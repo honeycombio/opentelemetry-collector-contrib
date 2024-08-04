@@ -112,7 +112,7 @@ func (p *reduceProcessor) ConsumeLogs(ctx context.Context, ld plog.Logs) error {
 				}
 
 				// increment number of reduced log records
-				p.telemetryBuilder.ReduceProcessorMerged.Add(ctx, 1)
+				p.telemetryBuilder.ReduceProcessorAggregated.Add(ctx, 1)
 
 				// try to get reduce state from the cache
 				state, ok := p.cache.Get(hash)
