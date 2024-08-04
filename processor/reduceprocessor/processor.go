@@ -10,6 +10,7 @@ import (
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/plog"
 	"go.opentelemetry.io/collector/processor"
+	"go.uber.org/zap"
 
 	"github.com/hashicorp/golang-lru/v2/expirable"
 
@@ -44,6 +45,7 @@ func newMergeState(r pcommon.Resource, s pcommon.InstrumentationScope, lr plog.L
 type reduceProcessor struct {
 	telemetryBuilder *metadata.TelemetryBuilder
 	nextConsumer     consumer.Logs
+	logger           *zap.Logger
 	cache            *expirable.LRU[cacheKey, *mergeState]
 	config           *Config
 }
@@ -216,8 +218,11 @@ func (p *reduceProcessor) toLogs(state *mergeState) plog.Logs {
 }
 
 func (p *reduceProcessor) onEvict(key cacheKey, state *mergeState) {
-	lr := p.toLogs(state)
-	p.nextConsumer.ConsumeLogs(context.Background(), lr)
+	// send merged log record to next consumer
+	logs := p.toLogs(state)
+	if err := p.nextConsumer.ConsumeLogs(context.Background(), logs); err != nil {
+		p.logger.Error("failed to send logs to next consumer", zap.Error(err))
+	}
 
 	// increment number of output log records
 	p.telemetryBuilder.ReduceProcessorOutput.Add(context.Background(), 1)

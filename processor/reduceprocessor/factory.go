@@ -38,6 +38,7 @@ func newReduceLogProcessor(_ context.Context, set processor.Settings, cfg *Confi
 	p := &reduceProcessor{
 		telemetryBuilder: telemetryBuilder,
 		nextConsumer:     nextConsumer,
+		logger:           set.Logger,
 		config:           cfg,
 	}
 
