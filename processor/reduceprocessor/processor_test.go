@@ -215,11 +215,11 @@ func TestReduceStateShouldEvict(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			state := reduceState{
+			state := cacheEntry{
 				count:     tc.count,
 				createdAt: tc.createdAt,
 			}
-			require.Equal(t, tc.expected, state.shouldEvict(tc.maxCount, tc.maxAge))
+			require.Equal(t, tc.expected, state.isValid(tc.maxCount, tc.maxAge))
 		})
 	}
 }
