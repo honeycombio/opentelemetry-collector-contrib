@@ -21,7 +21,7 @@ func newCache(telemetryBuilder *metadata.TelemetryBuilder, logger *zap.Logger, n
 		telemetryBuilder.ReduceProcessorOutput.Add(context.Background(), int64(1))
 
 		// create logs from cache entry and send to next consumer
-		logs := entry.toLogs(config, entry)
+		logs := entry.toLogs(config)
 		err := nextConsumer.ConsumeLogs(context.Background(), logs)
 		if err != nil {
 			logger.Error("Failed to send logs to next consumer", zap.Error(err))
@@ -98,12 +98,12 @@ func newCacheEntry(resource pcommon.Resource, scope pcommon.InstrumentationScope
 	}
 }
 
-func (e *cacheEntry) merge(mergeStrategies map[string]MergeStrategy, resource pcommon.Resource, scope pcommon.InstrumentationScope, logRecord plog.LogRecord) {
-	e.count += 1
-	e.lastSeen = e.log.Timestamp()
-	mergeAttributes(mergeStrategies, e.resource.Attributes(), resource.Attributes())
-	mergeAttributes(mergeStrategies, e.scope.Attributes(), scope.Attributes())
-	mergeAttributes(mergeStrategies, e.log.Attributes(), logRecord.Attributes())
+func (entry *cacheEntry) merge(mergeStrategies map[string]MergeStrategy, resource pcommon.Resource, scope pcommon.InstrumentationScope, logRecord plog.LogRecord) {
+	entry.count += 1
+	entry.lastSeen = entry.log.Timestamp()
+	mergeAttributes(mergeStrategies, entry.resource.Attributes(), resource.Attributes())
+	mergeAttributes(mergeStrategies, entry.scope.Attributes(), scope.Attributes())
+	mergeAttributes(mergeStrategies, entry.log.Attributes(), logRecord.Attributes())
 }
 
 func mergeAttributes(mergeStrategies map[string]MergeStrategy, existingAttrs pcommon.Map, additionalAttrs pcommon.Map) {
@@ -174,11 +174,11 @@ func (entry *cacheEntry) isValid(maxCount int, maxAge time.Duration) bool {
 	return false
 }
 
-func (e *cacheEntry) toLogs(config *Config, entry *cacheEntry) plog.Logs {
+func (entry *cacheEntry) toLogs(config *Config) plog.Logs {
 	logs := plog.NewLogs()
 
 	rl := logs.ResourceLogs().AppendEmpty()
-	e.resource.CopyTo(rl.Resource())
+	entry.resource.CopyTo(rl.Resource())
 
 	sl := rl.ScopeLogs().AppendEmpty()
 	entry.scope.CopyTo(sl.Scope())
