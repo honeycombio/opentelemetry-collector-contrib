@@ -71,6 +71,11 @@ func TestProcessLogsDeduplicate(t *testing.T) {
 			inputFile:    "duplicate-attrs.yaml",
 			expectedFile: "duplicate-attrs-expected.yaml",
 		},
+		{
+			name:         "merge counts are preseved",
+			inputFile:    "merge-counts.yaml",
+			expectedFile: "merge-counts-expected.yaml",
+		},
 	}
 
 	for _, tc := range testCases {

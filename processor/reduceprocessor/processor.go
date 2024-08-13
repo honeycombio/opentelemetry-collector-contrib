@@ -5,6 +5,7 @@ import (
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"
+	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/plog"
 	"go.opentelemetry.io/collector/processor"
 	"go.uber.org/zap"
@@ -94,6 +95,10 @@ func (p *reduceProcessor) ConsumeLogs(ctx context.Context, ld plog.Logs) error {
 					}
 				}
 
+				// get merge count from new record, scope or resource attributes and add to the cache entry
+				mergeCount := getMergeCount(p.config.ReduceCountAttribute, resource, scope, logRecord)
+				cacheEntry.IncrementCount(mergeCount)
+
 				// add entry to the cache, replaces existing entry if present
 				p.cache.Add(cacheKey, cacheEntry)
 
@@ -114,4 +119,21 @@ func (p *reduceProcessor) ConsumeLogs(ctx context.Context, ld plog.Logs) error {
 		return p.nextConsumer.ConsumeLogs(ctx, ld)
 	}
 	return nil
+}
+
+// getMergeCount returns the merge count from the log record, scope or resource attributes
+// order matters, log record attributes take precedence over scope attributes and scope attributes take precedence over resource attributes
+// return 1 if not found
+func getMergeCount(name string, resource pcommon.Resource, scope pcommon.InstrumentationScope, logRecord plog.LogRecord) int {
+	attr, ok := logRecord.Attributes().Get(name)
+	if ok {
+		return int(attr.Int())
+	}
+	if attr, ok = scope.Attributes().Get(name); ok {
+		return int(attr.Int())
+	}
+	if attr, ok = resource.Attributes().Get(name); ok {
+		return int(attr.Int())
+	}
+	return 1
 }

@@ -92,18 +92,20 @@ func newCacheEntry(resource pcommon.Resource, scope pcommon.InstrumentationScope
 		resource:  resource,
 		scope:     scope,
 		log:       log,
-		count:     1,
 		firstSeen: log.Timestamp(),
 		lastSeen:  log.Timestamp(),
 	}
 }
 
 func (entry *cacheEntry) merge(mergeStrategies map[string]MergeStrategy, resource pcommon.Resource, scope pcommon.InstrumentationScope, logRecord plog.LogRecord) {
-	entry.count += 1
 	entry.lastSeen = entry.log.Timestamp()
 	mergeAttributes(mergeStrategies, entry.resource.Attributes(), resource.Attributes())
 	mergeAttributes(mergeStrategies, entry.scope.Attributes(), scope.Attributes())
 	mergeAttributes(mergeStrategies, entry.log.Attributes(), logRecord.Attributes())
+}
+
+func (entry *cacheEntry) IncrementCount(mergeCount int) {
+	entry.count += mergeCount
 }
 
 func mergeAttributes(mergeStrategies map[string]MergeStrategy, existingAttrs pcommon.Map, additionalAttrs pcommon.Map) {
