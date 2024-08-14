@@ -14,11 +14,11 @@ import (
 )
 
 func Meter(settings component.TelemetrySettings) metric.Meter {
-	return settings.MeterProvider.Meter("otelcol/probabilisticsampler")
+	return settings.MeterProvider.Meter("github.com/open-telemetry/opentelemetry-collector-contrib/processor/probabilisticsamplerprocessor")
 }
 
 func Tracer(settings component.TelemetrySettings) trace.Tracer {
-	return settings.TracerProvider.Tracer("otelcol/probabilisticsampler")
+	return settings.TracerProvider.Tracer("github.com/open-telemetry/opentelemetry-collector-contrib/processor/probabilisticsamplerprocessor")
 }
 
 // TelemetryBuilder provides an interface for components to report telemetry
@@ -54,13 +54,13 @@ func NewTelemetryBuilder(settings component.TelemetrySettings, options ...teleme
 		builder.meter = noop.Meter{}
 	}
 	builder.ProcessorProbabilisticSamplerCountLogsSampled, err = builder.meter.Int64Counter(
-		"processor_probabilistic_sampler_count_logs_sampled",
+		"otelcol_processor_probabilistic_sampler_count_logs_sampled",
 		metric.WithDescription("Count of logs that were sampled or not"),
 		metric.WithUnit("1"),
 	)
 	errs = errors.Join(errs, err)
 	builder.ProcessorProbabilisticSamplerCountTracesSampled, err = builder.meter.Int64Counter(
-		"processor_probabilistic_sampler_count_traces_sampled",
+		"otelcol_processor_probabilistic_sampler_count_traces_sampled",
 		metric.WithDescription("Count of traces that were sampled or not"),
 		metric.WithUnit("1"),
 	)

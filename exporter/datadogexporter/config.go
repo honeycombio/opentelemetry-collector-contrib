@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/DataDog/datadog-agent/pkg/util/hostname/validate"
 	"go.opentelemetry.io/collector/component"
@@ -323,6 +324,7 @@ type LogsConfig struct {
 
 	// DumpPayloads report whether payloads should be dumped when logging level is debug.
 	// Note: this config option does not apply when enabling the `exporter.datadogexporter.UseLogsAgentExporter` feature flag.
+	// Deprecated: This config option is not supported in the Datadog Agent logs pipeline.
 	DumpPayloads bool `mapstructure:"dump_payloads"`
 
 	// UseCompression enables the logs agent to compress logs before sending them.
@@ -411,6 +413,11 @@ type HostMetadataConfig struct {
 	// These tags will be attached to telemetry signals that have the host metadata hostname.
 	// To attach tags to telemetry signals regardless of the host, use a processor instead.
 	Tags []string `mapstructure:"tags"`
+
+	// sourceTimeout is the timeout to fetch from each provider - for example AWS IMDS.
+	// If unset, or set to zero duration, there will be no timeout applied.
+	// Default is no timeout.
+	sourceTimeout time.Duration
 }
 
 // Config defines configuration for the Datadog exporter.
@@ -661,6 +668,9 @@ func (c *Config) Unmarshal(configMap *confmap.Conf) error {
 				enabledText = "disabled"
 			}
 			return fmt.Errorf("%v is not valid when the exporter.datadogexporter.UseLogsAgentExporter feature gate is %v", logsExporterSetting.setting, enabledText)
+		}
+		if logsExporterSetting.setting == "logs::dump_payloads" && logsExporterSetting.valid && configMap.IsSet(logsExporterSetting.setting) {
+			c.warnings = append(c.warnings, fmt.Errorf("%v is deprecated and will raise an error if set when the Datadog Agent logs pipeline is enabled by default in collector version v0.108.0", logsExporterSetting.setting))
 		}
 	}
 
