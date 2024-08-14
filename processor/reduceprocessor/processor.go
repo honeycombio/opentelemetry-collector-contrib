@@ -2,6 +2,8 @@ package reduceprocessor
 
 import (
 	"context"
+	"sync"
+	"time"
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"
@@ -20,6 +22,10 @@ type reduceProcessor struct {
 	logger           *zap.Logger
 	cache            *simplelru.LRU[cacheKey, *cacheEntry]
 	config           *Config
+
+	cancel context.CancelFunc
+	wg     sync.WaitGroup
+	mux    sync.Mutex
 }
 
 var _ processor.Logs = (*reduceProcessor)(nil)
@@ -44,16 +50,65 @@ func (p *reduceProcessor) Capabilities() consumer.Capabilities {
 	return consumer.Capabilities{MutatesData: true}
 }
 
-func (p *reduceProcessor) Start(context.Context, component.Host) error {
+func (p *reduceProcessor) Start(ctx context.Context, _ component.Host) error {
+	ctx, cancel := context.WithCancel(ctx)
+	p.cancel = cancel
+
+	p.wg.Add(1)
+	go p.handleExportInterval(ctx)
+
 	return nil
 }
 
+// handleExportInterval sends metrics at the configured interval.
+func (p *reduceProcessor) handleExportInterval(ctx context.Context) {
+	defer p.wg.Done()
+
+	ticker := time.NewTicker(p.config.MaxReduceTimeout)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			// Export any remaining logs
+			p.exportLogs()
+			if err := ctx.Err(); err != context.Canceled {
+				p.logger.Error("context error", zap.Error(err))
+			}
+			return
+		case <-ticker.C:
+			p.exportLogs()
+		}
+	}
+}
+
+// exportLogs exports the logs to the next consumer.
+func (p *reduceProcessor) exportLogs() {
+	p.mux.Lock()
+	defer p.mux.Unlock()
+
+	for _, k := range p.cache.Keys() {
+		entry, ok := p.cache.Get(k)
+		if ok && entry.isInvalid(p.config.MaxReduceCount, p.config.MaxReduceTimeout) {
+			p.cache.Remove(k)
+		}
+	}
+}
+
 func (p *reduceProcessor) Shutdown(_ context.Context) error {
+	if p.cancel != nil {
+		// Call cancel to stop the export interval goroutine and wait for it to finish.
+		p.cancel()
+		p.wg.Wait()
+	}
 	p.cache.Purge()
 	return nil
 }
 
 func (p *reduceProcessor) ConsumeLogs(ctx context.Context, ld plog.Logs) error {
+	p.mux.Lock()
+	defer p.mux.Unlock()
+
 	p.logger.Warn("starting ConsumeLogs")
 	ld.ResourceLogs().RemoveIf(func(rl plog.ResourceLogs) bool {
 		// cache copy of resource attributes
@@ -84,7 +139,6 @@ func (p *reduceProcessor) ConsumeLogs(ctx context.Context, ld plog.Logs) error {
 					// check if the existing entry is still valid
 					if cacheEntry.isInvalid(p.config.MaxReduceCount, p.config.MaxReduceTimeout) {
 						// not valid, remove it from the cache which triggers onEvict and sends it to the next consumer
-						// TODO: note that this will introduce another issue if the data flow stops
 						p.cache.Remove(cacheKey)
 
 						// crete a new entry
