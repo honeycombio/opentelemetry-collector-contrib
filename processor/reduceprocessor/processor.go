@@ -10,7 +10,6 @@ import (
 	"go.opentelemetry.io/collector/processor"
 	"go.uber.org/zap"
 
-	"github.com/hashicorp/golang-lru/v2/simplelru"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/reduceprocessor/internal/metadata"
 )
 
@@ -18,7 +17,7 @@ type reduceProcessor struct {
 	telemetryBuilder *metadata.TelemetryBuilder
 	nextConsumer     consumer.Logs
 	logger           *zap.Logger
-	cache            *simplelru.LRU[cacheKey, *cacheEntry]
+	cache            *LRU[cacheKey, *cacheEntry]
 	config           *Config
 }
 
@@ -30,7 +29,7 @@ func newReduceProcessor(_ context.Context, settings processor.Settings, nextCons
 		return nil, err
 	}
 
-	c, err := newCache(telemetryBuilder, settings.Logger, nextConsumer, config)
+	c := newCache(telemetryBuilder, settings.Logger, nextConsumer, config)
 	return &reduceProcessor{
 		telemetryBuilder: telemetryBuilder,
 		nextConsumer:     nextConsumer,
