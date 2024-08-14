@@ -169,7 +169,7 @@ func mergeAttributes(mergeStrategies map[string]MergeStrategy, existingAttrs pco
 	})
 }
 
-func (entry *cacheEntry) isValid(maxCount int, maxAge time.Duration) bool {
+func (entry *cacheEntry) isInvalid(maxCount int, maxAge time.Duration) bool {
 	if entry.count >= maxCount {
 		return true
 	}

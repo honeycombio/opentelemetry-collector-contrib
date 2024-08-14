@@ -224,7 +224,7 @@ func TestReduceStateShouldEvict(t *testing.T) {
 				count:     tc.count,
 				createdAt: tc.createdAt,
 			}
-			require.Equal(t, tc.expected, state.isValid(tc.maxCount, tc.maxAge))
+			require.Equal(t, tc.expected, state.isInvalid(tc.maxCount, tc.maxAge))
 		})
 	}
 }

@@ -80,7 +80,7 @@ func (p *reduceProcessor) ConsumeLogs(ctx context.Context, ld plog.Logs) error {
 					cacheEntry = newCacheEntry(resource, scope, logRecord)
 				} else {
 					// check if the existing entry is still valid
-					if cacheEntry.isValid(p.config.MaxReduceCount, p.config.MaxReduceTimeout) {
+					if cacheEntry.isInvalid(p.config.MaxReduceCount, p.config.MaxReduceTimeout) {
 						// not valid, remove it from the cache which triggers onEvict and sends it to the next consumer
 						p.cache.Remove(cacheKey)
 
