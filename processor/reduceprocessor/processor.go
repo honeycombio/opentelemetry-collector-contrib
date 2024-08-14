@@ -73,9 +73,6 @@ func (p *reduceProcessor) ConsumeLogs(ctx context.Context, ld plog.Logs) error {
 					return false
 				}
 
-				// increment number of aggregated log records
-				p.telemetryBuilder.ReduceProcessorAggregated.Add(ctx, 1)
-
 				// try to get existing entry from cache
 				cacheEntry, ok := p.cache.Get(cacheKey)
 				if !ok {

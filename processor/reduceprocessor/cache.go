@@ -20,6 +20,9 @@ func newCache(telemetryBuilder *metadata.TelemetryBuilder, logger *zap.Logger, n
 		// increment output counter
 		telemetryBuilder.ReduceProcessorOutput.Add(context.Background(), int64(1))
 
+		// increment number of combined log records
+		telemetryBuilder.ReduceProcessorCombined.Record(context.Background(), int64(entry.count))
+
 		// create logs from cache entry and send to next consumer
 		logs := entry.toLogs(config)
 		err := nextConsumer.ConsumeLogs(context.Background(), logs)
