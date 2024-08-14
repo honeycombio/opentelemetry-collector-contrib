@@ -7,7 +7,8 @@ import (
 )
 
 var (
-	Type = component.MustNewType("reduce")
+	Type      = component.MustNewType("reduce")
+	ScopeName = "otelcol/reduce"
 )
 
 const (

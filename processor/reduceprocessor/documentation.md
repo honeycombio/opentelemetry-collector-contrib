@@ -6,15 +6,15 @@
 
 The following telemetry is emitted by this component.
 
-### reduce_processor_aggregated
+### otelcol_reduce_processor_combined
 
-Number of log events that were aggregated
+Number of log events that were combined
 
-| Unit | Metric Type | Value Type | Monotonic |
-| ---- | ----------- | ---------- | --------- |
-| {records} | Sum | Int | true |
+| Unit | Metric Type | Value Type |
+| ---- | ----------- | ---------- |
+| {records} | Histogram | Int |
 
-### reduce_processor_output
+### otelcol_reduce_processor_output
 
 Number of aggreated log events output
 
@@ -22,7 +22,7 @@ Number of aggreated log events output
 | ---- | ----------- | ---------- | --------- |
 | {records} | Sum | Int | true |
 
-### reduce_processor_received
+### otelcol_reduce_processor_received
 
 Number of log events received
 

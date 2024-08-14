@@ -26,13 +26,12 @@ telemetry:
       sum:
         value_type: int
         monotonic: true
-    reduce_processor_aggregated:
-      description: Number of log events that were aggregated
+    reduce_processor_combined:
+      description: Number of log events that were combined
       unit: "{records}"
       enabled: true
-      sum:
+      histogram:
         value_type: int
-        monotonic: true
     reduce_processor_output:
       description: Number of aggreated log events output
       unit: "{records}"
