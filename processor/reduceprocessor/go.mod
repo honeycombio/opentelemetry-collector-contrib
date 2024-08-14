@@ -4,6 +4,7 @@ go 1.21.0
 
 require (
 	github.com/cespare/xxhash/v2 v2.3.0
+	github.com/hashicorp/golang-lru/v2 v2.0.7
 	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/golden v0.104.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/pdatatest v0.104.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/pdatautil v0.104.0

@@ -3,11 +3,10 @@
 package reduceprocessor
 
 import (
-	"os"
+	"go.uber.org/goleak"
 	"testing"
 )
 
 func TestMain(m *testing.M) {
-	// skipping goleak test as per metadata.yml configuration
-	os.Exit(m.Run())
+	goleak.VerifyTestMain(m, goleak.IgnoreTopFunction("github.com/hashicorp/golang-lru/v2/expirable.NewLRU[...].func1"))
 }

@@ -13,7 +13,9 @@ status:
 tests:
   config:
   goleak:
-    skip: true
+    ignore:
+      top:
+        - "github.com/hashicorp/golang-lru/v2/expirable.NewLRU[...].func1"
 
 telemetry:
   metrics:
