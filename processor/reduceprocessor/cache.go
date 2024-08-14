@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/cespare/xxhash/v2"
-	"github.com/hashicorp/golang-lru/v2/expirable"
+	"github.com/hashicorp/golang-lru/v2/simplelru"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/pdatautil"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/reduceprocessor/internal/metadata"
 	"go.opentelemetry.io/collector/consumer"
@@ -15,7 +15,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func newCache(telemetryBuilder *metadata.TelemetryBuilder, logger *zap.Logger, nextConsumer consumer.Logs, config *Config) *expirable.LRU[cacheKey, *cacheEntry] {
+func newCache(telemetryBuilder *metadata.TelemetryBuilder, logger *zap.Logger, nextConsumer consumer.Logs, config *Config) (*simplelru.LRU[cacheKey, *cacheEntry], error) {
 	onEvict := func(key cacheKey, entry *cacheEntry) {
 		// increment output counter
 		telemetryBuilder.ReduceProcessorOutput.Add(context.Background(), int64(1))
@@ -30,7 +30,7 @@ func newCache(telemetryBuilder *metadata.TelemetryBuilder, logger *zap.Logger, n
 			logger.Error("Failed to send logs to next consumer", zap.Error(err))
 		}
 	}
-	return expirable.NewLRU(config.CacheSize, onEvict, config.ReduceTimeout)
+	return simplelru.NewLRU(config.CacheSize, onEvict)
 }
 
 type cacheKey [16]byte

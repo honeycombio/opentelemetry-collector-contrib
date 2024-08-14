@@ -10,7 +10,7 @@ import (
 	"go.opentelemetry.io/collector/processor"
 	"go.uber.org/zap"
 
-	"github.com/hashicorp/golang-lru/v2/expirable"
+	"github.com/hashicorp/golang-lru/v2/simplelru"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/reduceprocessor/internal/metadata"
 )
 
@@ -18,7 +18,7 @@ type reduceProcessor struct {
 	telemetryBuilder *metadata.TelemetryBuilder
 	nextConsumer     consumer.Logs
 	logger           *zap.Logger
-	cache            *expirable.LRU[cacheKey, *cacheEntry]
+	cache            *simplelru.LRU[cacheKey, *cacheEntry]
 	config           *Config
 }
 
@@ -30,13 +30,14 @@ func newReduceProcessor(_ context.Context, settings processor.Settings, nextCons
 		return nil, err
 	}
 
+	c, err := newCache(telemetryBuilder, settings.Logger, nextConsumer, config)
 	return &reduceProcessor{
 		telemetryBuilder: telemetryBuilder,
 		nextConsumer:     nextConsumer,
 		logger:           settings.Logger,
 		config:           config,
-		cache:            newCache(telemetryBuilder, settings.Logger, nextConsumer, config),
-	}, nil
+		cache:            c,
+	}, err
 }
 
 func (p *reduceProcessor) Capabilities() consumer.Capabilities {
@@ -53,6 +54,7 @@ func (p *reduceProcessor) Shutdown(_ context.Context) error {
 }
 
 func (p *reduceProcessor) ConsumeLogs(ctx context.Context, ld plog.Logs) error {
+	p.logger.Warn("starting ConsumeLogs")
 	ld.ResourceLogs().RemoveIf(func(rl plog.ResourceLogs) bool {
 		// cache copy of resource attributes
 		resource := rl.Resource()
@@ -110,11 +112,13 @@ func (p *reduceProcessor) ConsumeLogs(ctx context.Context, ld plog.Logs) error {
 		// remove if no scope logs left
 		return rl.ScopeLogs().Len() == 0
 	})
+	p.logger.Warn("ending ConsumeLogs")
 
 	// pass any remaining unaggregated log records to the next consumer
 	if ld.LogRecordCount() > 0 {
 		return p.nextConsumer.ConsumeLogs(ctx, ld)
 	}
+
 	return nil
 }
 
