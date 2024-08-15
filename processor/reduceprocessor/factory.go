@@ -23,7 +23,6 @@ func NewFactory() processor.Factory {
 func createDefaultConfig() component.Config {
 	return &Config{
 		GroupBy:              []string{},
-		ReduceTimeout:        time.Second * 10,
 		MaxReduceTimeout:     time.Second * 60,
 		MaxReduceCount:       100,
 		CacheSize:            10_000,

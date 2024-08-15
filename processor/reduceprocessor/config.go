@@ -20,9 +20,6 @@ type Config struct {
 	// GroupBy is the list of attribute names used to group and aggregate log records. At least one attribute name is required.
 	GroupBy []string `mapstructure:"group_by"`
 
-	// ReduceTimeout is the amount of time to wait after the last log record was received before an aggregated log record should be considered complete. Default is 10s.
-	ReduceTimeout time.Duration `mapstructure:"reduce_timeout"`
-
 	// MaxReduceTimeout is the maximum amount of time an aggregated log record can be stored in the cache before it should be considered complete. Default is 60s.
 	MaxReduceTimeout time.Duration `mapstructure:"max_reduce_timeout"`
 
