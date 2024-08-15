@@ -85,9 +85,9 @@ func (p *reduceProcessor) exportLogs() {
 	p.mux.Lock()
 	defer p.mux.Unlock()
 
-	for _, entry := range p.cache {
+	for k, entry := range p.cache {
 		if entry.isInvalid(p.config.MaxReduceCount, p.config.MaxReduceTimeout) {
-			p.exportLog(entry)
+			p.evictEntry(k, entry)
 		}
 	}
 }
@@ -117,9 +117,14 @@ func (p *reduceProcessor) Shutdown(_ context.Context) error {
 	return nil
 }
 
+func (p *reduceProcessor) evictEntry(key cacheKey, entry *cacheEntry) {
+	p.exportLog(entry)
+	delete(p.cache, key)
+}
+
 func (p *reduceProcessor) purgeCache() {
-	for _, entry := range p.cache {
-		p.exportLog(entry)
+	for k, entry := range p.cache {
+		p.evictEntry(k, entry)
 	}
 }
 
@@ -156,7 +161,7 @@ func (p *reduceProcessor) ConsumeLogs(ctx context.Context, ld plog.Logs) error {
 					// check if the existing entry is still valid
 					if entry.isInvalid(p.config.MaxReduceCount, p.config.MaxReduceTimeout) {
 						// not valid, remove it from the cache which triggers onEvict and sends it to the next consumer
-						p.exportLog(entry)
+						p.evictEntry(key, entry)
 
 						// crete a new entry
 						entry = newCacheEntry(resource, scope, logRecord)
