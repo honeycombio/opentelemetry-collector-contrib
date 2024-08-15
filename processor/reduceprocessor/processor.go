@@ -12,7 +12,6 @@ import (
 	"go.opentelemetry.io/collector/processor"
 	"go.uber.org/zap"
 
-	"github.com/hashicorp/golang-lru/v2/simplelru"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/reduceprocessor/internal/metadata"
 )
 
@@ -20,7 +19,7 @@ type reduceProcessor struct {
 	telemetryBuilder *metadata.TelemetryBuilder
 	nextConsumer     consumer.Logs
 	logger           *zap.Logger
-	cache            *simplelru.LRU[cacheKey, *cacheEntry]
+	cache            map[cacheKey]*cacheEntry
 	config           *Config
 
 	cancel context.CancelFunc
@@ -36,13 +35,12 @@ func newReduceProcessor(_ context.Context, settings processor.Settings, nextCons
 		return nil, err
 	}
 
-	c, err := newCache(telemetryBuilder, settings.Logger, nextConsumer, config)
 	return &reduceProcessor{
 		telemetryBuilder: telemetryBuilder,
 		nextConsumer:     nextConsumer,
 		logger:           settings.Logger,
 		config:           config,
-		cache:            c,
+		cache:            make(map[cacheKey]*cacheEntry),
 	}, err
 }
 
@@ -87,11 +85,25 @@ func (p *reduceProcessor) exportLogs() {
 	p.mux.Lock()
 	defer p.mux.Unlock()
 
-	for _, k := range p.cache.Keys() {
-		entry, ok := p.cache.Get(k)
-		if ok && entry.isInvalid(p.config.MaxReduceCount, p.config.MaxReduceTimeout) {
-			p.cache.Remove(k)
+	for _, entry := range p.cache {
+		if entry.isInvalid(p.config.MaxReduceCount, p.config.MaxReduceTimeout) {
+			p.exportLog(entry)
 		}
+	}
+}
+
+func (p *reduceProcessor) exportLog(entry *cacheEntry) {
+	// increment output counter
+	p.telemetryBuilder.ReduceProcessorOutput.Add(context.Background(), int64(1))
+
+	// increment number of combined log records
+	p.telemetryBuilder.ReduceProcessorCombined.Record(context.Background(), int64(entry.count))
+
+	// create logs from cache entry and send to next consumer
+	logs := entry.toLogs(p.config)
+	err := p.nextConsumer.ConsumeLogs(context.Background(), logs)
+	if err != nil {
+		p.logger.Error("Failed to send logs to next consumer", zap.Error(err))
 	}
 }
 
@@ -101,15 +113,20 @@ func (p *reduceProcessor) Shutdown(_ context.Context) error {
 		p.cancel()
 		p.wg.Wait()
 	}
-	p.cache.Purge()
+	p.purgeCache()
 	return nil
+}
+
+func (p *reduceProcessor) purgeCache() {
+	for _, entry := range p.cache {
+		p.exportLog(entry)
+	}
 }
 
 func (p *reduceProcessor) ConsumeLogs(ctx context.Context, ld plog.Logs) error {
 	p.mux.Lock()
 	defer p.mux.Unlock()
 
-	p.logger.Warn("starting ConsumeLogs")
 	ld.ResourceLogs().RemoveIf(func(rl plog.ResourceLogs) bool {
 		// cache copy of resource attributes
 		resource := rl.Resource()
@@ -124,37 +141,37 @@ func (p *reduceProcessor) ConsumeLogs(ctx context.Context, ld plog.Logs) error {
 			sl.LogRecords().RemoveIf(func(logRecord plog.LogRecord) bool {
 				// create cache key using resource, scope and log record
 				// returns whether we can aggregate the log record or not
-				cacheKey, keep := newCacheKey(p.config.GroupBy, resource, scope, logRecord)
-				if !keep {
+				key, canAggregate := newCacheKey(p.config.GroupBy, resource, scope, logRecord)
+				if !canAggregate {
 					// cannot aggregate, don't remove log record
 					return false
 				}
 
 				// try to get existing entry from cache
-				cacheEntry, ok := p.cache.Get(cacheKey)
+				entry, ok := p.cache[key]
 				if !ok {
 					// not found, create a new entry
-					cacheEntry = newCacheEntry(resource, scope, logRecord)
+					entry = newCacheEntry(resource, scope, logRecord)
 				} else {
 					// check if the existing entry is still valid
-					if cacheEntry.isInvalid(p.config.MaxReduceCount, p.config.MaxReduceTimeout) {
+					if entry.isInvalid(p.config.MaxReduceCount, p.config.MaxReduceTimeout) {
 						// not valid, remove it from the cache which triggers onEvict and sends it to the next consumer
-						p.cache.Remove(cacheKey)
+						p.exportLog(entry)
 
 						// crete a new entry
-						cacheEntry = newCacheEntry(resource, scope, logRecord)
+						entry = newCacheEntry(resource, scope, logRecord)
 					} else {
 						// valid, merge log record with existing entry
-						cacheEntry.merge(p.config.MergeStrategies, resource, scope, logRecord)
+						entry.merge(p.config.MergeStrategies, resource, scope, logRecord)
 					}
 				}
 
 				// get merge count from new record, scope or resource attributes and add to the cache entry
 				mergeCount := getMergeCount(p.config.ReduceCountAttribute, resource, scope, logRecord)
-				cacheEntry.IncrementCount(mergeCount)
+				entry.IncrementCount(mergeCount)
 
 				// add entry to the cache, replaces existing entry if present
-				p.cache.Add(cacheKey, cacheEntry)
+				p.cache[key] = entry
 
 				// remove log record as it has been aggregated
 				return true
@@ -167,7 +184,6 @@ func (p *reduceProcessor) ConsumeLogs(ctx context.Context, ld plog.Logs) error {
 		// remove if no scope logs left
 		return rl.ScopeLogs().Len() == 0
 	})
-	p.logger.Warn("ending ConsumeLogs")
 
 	// pass any remaining unaggregated log records to the next consumer
 	if ld.LogRecordCount() > 0 {

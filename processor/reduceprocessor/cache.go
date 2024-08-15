@@ -1,37 +1,14 @@
 package reduceprocessor
 
 import (
-	"context"
 	"strings"
 	"time"
 
 	"github.com/cespare/xxhash/v2"
-	"github.com/hashicorp/golang-lru/v2/simplelru"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/pdatautil"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/reduceprocessor/internal/metadata"
-	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/plog"
-	"go.uber.org/zap"
 )
-
-func newCache(telemetryBuilder *metadata.TelemetryBuilder, logger *zap.Logger, nextConsumer consumer.Logs, config *Config) (*simplelru.LRU[cacheKey, *cacheEntry], error) {
-	onEvict := func(key cacheKey, entry *cacheEntry) {
-		// increment output counter
-		telemetryBuilder.ReduceProcessorOutput.Add(context.Background(), int64(1))
-
-		// increment number of combined log records
-		telemetryBuilder.ReduceProcessorCombined.Record(context.Background(), int64(entry.count))
-
-		// create logs from cache entry and send to next consumer
-		logs := entry.toLogs(config)
-		err := nextConsumer.ConsumeLogs(context.Background(), logs)
-		if err != nil {
-			logger.Error("Failed to send logs to next consumer", zap.Error(err))
-		}
-	}
-	return simplelru.NewLRU(config.CacheSize, onEvict)
-}
 
 type cacheKey [16]byte
 

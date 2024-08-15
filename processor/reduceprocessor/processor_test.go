@@ -128,7 +128,7 @@ func TestMaxMergeCountSendsLogsRecord(t *testing.T) {
 
 	require.NoError(t, p.ConsumeLogs(context.Background(), input))
 
-	p.(*reduceProcessor).cache.Purge()
+	p.(*reduceProcessor).purgeCache()
 
 	actual := sink.AllLogs()
 	require.Len(t, actual, 2)
@@ -158,8 +158,7 @@ func TestFirstLastSeenAttributes(t *testing.T) {
 
 	require.NoError(t, p.ConsumeLogs(context.Background(), input))
 
-	p.(*reduceProcessor).cache.Purge()
-
+	p.(*reduceProcessor).purgeCache()
 	actual := sink.AllLogs()
 	require.Len(t, actual, 1)
 
