@@ -1,5 +1,5 @@
 server:
-  endpoint: ws://127.0.0.1:4320/v1/opamp
+  endpoint: ws://host.docker.internal:4320/v1/opamp
   tls:
     # Disable verification to test locally.
     # Don't do this in production.
@@ -8,13 +8,14 @@ server:
 
 capabilities:
   reports_effective_config: true
-  reports_own_metrics: true
+  reports_own_metrics: false
+  reports_own_logs: false
   reports_health: true
   accepts_remote_config: true
   reports_remote_config: true
 
 agent:
-  executable: ../../bin/otelcontribcol_darwin_arm64
+  executable: /otelcol-contrib
 
 storage:
   directory: .
