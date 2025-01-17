@@ -1,0 +1,21 @@
+server:
+  endpoint: ws://host.docker.internal:4320/v1/opamp
+  tls:
+    # Disable verification to test locally.
+    # Don't do this in production.
+    insecure_skip_verify: true
+    # For more TLS settings see config/configtls.ClientConfig
+
+capabilities:
+  reports_effective_config: true
+  reports_own_metrics: false
+  reports_own_logs: false
+  reports_health: true
+  accepts_remote_config: true
+  reports_remote_config: true
+
+agent:
+  executable: /otelcol-contrib
+
+storage:
+  directory: .
