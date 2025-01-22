@@ -6,9 +6,10 @@ e2e-test:
 
 .PHONY: docker-build
 docker-build:
-	go build -trimpath -o opampsupervisor .
+	GO111MODULE=on CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -o opampsupervisor .
+	cd ../otelcontribcol && GO111MODULE=on CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -o ../opampsupervisor/otelcol-contrib .
 	docker buildx build -t hny/opampsupervisor --platform linux/amd64,linux/arm64 .
-	rm opampsupervisor
+	rm opampsupervisor && rm otelcol-contrib
 
 .PHONY: docker-push
 docker-push:
