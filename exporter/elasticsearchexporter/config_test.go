@@ -81,8 +81,8 @@ func TestConfig(t *testing.T) {
 				Pipeline: "mypipeline",
 				ClientConfig: withDefaultHTTPClientConfig(func(cfg *confighttp.ClientConfig) {
 					cfg.Timeout = 2 * time.Minute
-					cfg.MaxIdleConns = &defaultMaxIdleConns
-					cfg.IdleConnTimeout = &defaultIdleConnTimeout
+					cfg.MaxIdleConns = defaultMaxIdleConns
+					cfg.IdleConnTimeout = defaultIdleConnTimeout
 					cfg.Headers = map[string]configopaque.String{
 						"myheader": "test",
 					}
@@ -118,11 +118,11 @@ func TestConfig(t *testing.T) {
 				},
 				Batcher: BatcherConfig{
 					FlushTimeout: 30 * time.Second,
-					MinSizeConfig: exporterbatcher.MinSizeConfig{
-						MinSizeItems: 5000,
+					MinSizeConfig: exporterbatcher.MinSizeConfig{ //nolint:staticcheck
+						MinSizeItems: &defaultBatcherMinSizeItems,
 					},
-					MaxSizeConfig: exporterbatcher.MaxSizeConfig{
-						MaxSizeItems: 0,
+					MaxSizeConfig: exporterbatcher.MaxSizeConfig{ //nolint:staticcheck
+						MaxSizeItems: nil,
 					},
 				},
 			},
@@ -155,8 +155,8 @@ func TestConfig(t *testing.T) {
 				Pipeline: "mypipeline",
 				ClientConfig: withDefaultHTTPClientConfig(func(cfg *confighttp.ClientConfig) {
 					cfg.Timeout = 2 * time.Minute
-					cfg.MaxIdleConns = &defaultMaxIdleConns
-					cfg.IdleConnTimeout = &defaultIdleConnTimeout
+					cfg.MaxIdleConns = defaultMaxIdleConns
+					cfg.IdleConnTimeout = defaultIdleConnTimeout
 					cfg.Headers = map[string]configopaque.String{
 						"myheader": "test",
 					}
@@ -192,11 +192,11 @@ func TestConfig(t *testing.T) {
 				},
 				Batcher: BatcherConfig{
 					FlushTimeout: 30 * time.Second,
-					MinSizeConfig: exporterbatcher.MinSizeConfig{
-						MinSizeItems: 5000,
+					MinSizeConfig: exporterbatcher.MinSizeConfig{ //nolint:staticcheck
+						MinSizeItems: &defaultBatcherMinSizeItems,
 					},
-					MaxSizeConfig: exporterbatcher.MaxSizeConfig{
-						MaxSizeItems: 0,
+					MaxSizeConfig: exporterbatcher.MaxSizeConfig{ //nolint:staticcheck
+						MaxSizeItems: nil,
 					},
 				},
 			},
@@ -229,8 +229,8 @@ func TestConfig(t *testing.T) {
 				Pipeline: "mypipeline",
 				ClientConfig: withDefaultHTTPClientConfig(func(cfg *confighttp.ClientConfig) {
 					cfg.Timeout = 2 * time.Minute
-					cfg.MaxIdleConns = &defaultMaxIdleConns
-					cfg.IdleConnTimeout = &defaultIdleConnTimeout
+					cfg.MaxIdleConns = defaultMaxIdleConns
+					cfg.IdleConnTimeout = defaultIdleConnTimeout
 					cfg.Headers = map[string]configopaque.String{
 						"myheader": "test",
 					}
@@ -266,11 +266,11 @@ func TestConfig(t *testing.T) {
 				},
 				Batcher: BatcherConfig{
 					FlushTimeout: 30 * time.Second,
-					MinSizeConfig: exporterbatcher.MinSizeConfig{
-						MinSizeItems: 5000,
+					MinSizeConfig: exporterbatcher.MinSizeConfig{ //nolint:staticcheck
+						MinSizeItems: &defaultBatcherMinSizeItems,
 					},
-					MaxSizeConfig: exporterbatcher.MaxSizeConfig{
-						MaxSizeItems: 0,
+					MaxSizeConfig: exporterbatcher.MaxSizeConfig{ //nolint:staticcheck
+						MaxSizeItems: nil,
 					},
 				},
 			},
