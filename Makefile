@@ -1,4 +1,5 @@
 include ./Makefile.Common
+include ./Makefile.Honeycomb
 
 RUN_CONFIG?=local/config.yaml
 CMD?=
