@@ -1,6 +1,6 @@
 .PHONY: docker-build
 docker-build:
-	docker buildx build --sbom true -t hny/opampsupervisor -t honeycombio/supervised-collector --platform linux/amd64,linux/arm64 .
+	docker buildx build --provenance=true --sbom true  -t hny/opampsupervisor -t honeycombio/supervised-collector --platform linux/amd64,linux/arm64 .
 
 .PHONY: docker-push
 docker-push:
