@@ -44,7 +44,7 @@ CONNECTOR_MODS := $(shell find ./connector/* $(FIND_MOD_ARGS) -exec $(TO_MOD_DIR
 INTERNAL_MODS := $(shell find ./internal/* $(FIND_MOD_ARGS) -exec $(TO_MOD_DIR) )
 PKG_MODS := $(shell find ./pkg/* $(FIND_MOD_ARGS) -exec $(TO_MOD_DIR) )
 CMD_MODS_0 := $(shell find ./cmd/[a-z]* $(FIND_MOD_ARGS) -not -path "./cmd/otel*col/*" -exec $(TO_MOD_DIR) )
-CMD_MODS := $(CMD_MODS_0) $(CMD_MODS_1)
+CMD_MODS := $(CMD_MODS_0)
 OTHER_MODS := $(shell find . $(EX_COMPONENTS) $(EX_INTERNAL) $(EX_PKG) $(EX_CMD) $(FIND_MOD_ARGS) -exec $(TO_MOD_DIR) )
 ALL_MODS := $(RECEIVER_MODS) $(PROCESSOR_MODS) $(EXPORTER_MODS) $(EXTENSION_MODS) $(CONNECTOR_MODS) $(INTERNAL_MODS) $(PKG_MODS) $(CMD_MODS) $(OTHER_MODS)
 
@@ -123,7 +123,8 @@ genlabels:
 		awk '{ print $$1 }' | \
 		sed -E 's%(.+)/$$%\1%' | \
 		while read -r COMPONENT; do \
-			LABEL_NAME=$$(printf '%s\n' "$${COMPONENT}" | sed -E 's%^(.+)/(.+)\1%\1/\2%'); \
+			PREFIX=$$(printf '%s' "$${COMPONENT}" | sed -E 's%([^/])/.+%\1%'); \
+			LABEL_NAME=$$(printf '%s\n' "$${COMPONENT}" | sed -E "s%^(.+)/(.+)$${PREFIX}%\1/\2%"); \
 			if (( $${#LABEL_NAME} > 50 )); then \
 				OIFS=$${IFS}; \
 				IFS='/'; \
@@ -186,6 +187,7 @@ gotest-with-junit:
 .PHONY: gotest-with-junit-and-cover
 gotest-with-junit-and-cover:
 	@$(MAKE) $(FOR_GROUP_TARGET) TARGET="test-with-junit-and-cover"
+	@go tool covdata textfmt -i=$(COVER_DIR_ABS) -o $(GROUP)-coverage.txt
 
 .PHONY: gobuildtest
 gobuildtest:
@@ -199,6 +201,10 @@ gorunbuilttest:
 gointegration-test:
 	$(MAKE) $(FOR_GROUP_TARGET) TARGET="mod-integration-test"
 
+.PHONY: gointegration-sudo-test
+gointegration-sudo-test:
+	$(MAKE) $(FOR_GROUP_TARGET) TARGET="mod-integration-sudo-test"
+
 .PHONY: gofmt
 gofmt:
 	$(MAKE) $(FOR_GROUP_TARGET) TARGET="fmt"
@@ -210,14 +216,6 @@ golint:
 .PHONY: gogovulncheck
 gogovulncheck:
 	$(MAKE) $(FOR_GROUP_TARGET) TARGET="govulncheck"
-
-.PHONY: gotestifylint
-gotestifylint:
-	$(MAKE) $(FOR_GROUP_TARGET) TARGET="testifylint"
-
-.PHONY: gotestifylint-fix
-gotestifylint-fix:
-	$(MAKE) $(FOR_GROUP_TARGET) TARGET="testifylint-fix"
 
 .PHONY: goporto
 goporto: $(PORTO)
@@ -337,8 +335,8 @@ run:
 
 .PHONY: docker-component # Not intended to be used directly
 docker-component: check-component
-	GOOS=linux GOARCH=amd64 $(MAKE) $(COMPONENT)
-	cp ./bin/$(COMPONENT)_linux_amd64 ./cmd/$(COMPONENT)/$(COMPONENT)
+	GOOS=linux GOARCH=$(GOARCH) $(MAKE) $(COMPONENT)
+	cp ./bin/$(COMPONENT)_linux_$(GOARCH) ./cmd/$(COMPONENT)/$(COMPONENT)
 	docker build -t $(COMPONENT) ./cmd/$(COMPONENT)/
 	rm ./cmd/$(COMPONENT)/$(COMPONENT)
 
@@ -352,12 +350,23 @@ endif
 docker-otelcontribcol:
 	COMPONENT=otelcontribcol $(MAKE) docker-component
 
+.PHONY: docker-supervisor-otelcontribcol
+docker-supervisor-otelcontribcol: docker-otelcontribcol
+	COMPONENT=opampsupervisor $(MAKE) docker-component
+
 .PHONY: docker-telemetrygen
 docker-telemetrygen:
 	GOOS=linux GOARCH=$(GOARCH) $(MAKE) telemetrygen
 	cp bin/telemetrygen_* cmd/telemetrygen/
 	cd cmd/telemetrygen && docker build --platform linux/$(GOARCH) --build-arg="TARGETOS=$(GOOS)" --build-arg="TARGETARCH=$(GOARCH)" -t telemetrygen:latest .
 	rm cmd/telemetrygen/telemetrygen_*
+
+.PHONY: docker-golden
+docker-golden:
+	GOOS=linux GOARCH=$(GOARCH) $(MAKE) golden
+	cp bin/golden_* cmd/golden/
+	cd cmd/golden && docker build --platform linux/$(GOARCH) --build-arg="TARGETOS=$(GOOS)" --build-arg="TARGETARCH=$(GOARCH)" -t golden:latest .
+	rm cmd/golden/golden_*
 
 .PHONY: generate
 generate: install-tools
@@ -371,6 +380,9 @@ gengithub: $(GITHUBGEN)
 .PHONY: gendistributions
 gendistributions: $(GITHUBGEN)
 	$(GITHUBGEN) distributions
+
+gencodecov: $(CODECOVGEN)
+	$(CODECOVGEN) --base-prefix github.com/open-telemetry/opentelemetry-collector-contrib --skipped-modules **/*test,**/examples/**,pkg/**,cmd/**,internal/**,*/encoding/**
 
 .PHONY: update-codeowners
 update-codeowners: generate gengithub
@@ -436,6 +448,18 @@ telemetrygen:
 telemetrygenlite:
 	cd ./cmd/telemetrygen && GO111MODULE=on CGO_ENABLED=0 $(GOCMD) build -trimpath -o ../../bin/telemetrygen_$(GOOS)_$(GOARCH)$(EXTENSION) \
 		-tags $(GO_BUILD_TAGS) -ldflags $(GO_BUILD_LDFLAGS) .
+
+# Build the Supervisor executable.
+.PHONY: opampsupervisor
+opampsupervisor:
+	cd ./cmd/opampsupervisor && GO111MODULE=on CGO_ENABLED=0 $(GOCMD) build -trimpath -o ../../bin/opampsupervisor_$(GOOS)_$(GOARCH)$(EXTENSION) \
+		-tags $(GO_BUILD_TAGS) .
+
+# Build the golden executable.
+.PHONY: golden
+golden:
+	cd ./cmd/golden && GO111MODULE=on CGO_ENABLED=0 $(GOCMD) build -trimpath -o ../../bin/golden_$(GOOS)_$(GOARCH)$(EXTENSION) \
+		-tags $(GO_BUILD_TAGS) .
 
 MODULES="internal/buildscripts/modules"
 .PHONY: update-core-modules
@@ -538,7 +562,7 @@ checkmetadata: $(CHECKFILE)
 
 .PHONY: checkapi
 checkapi: $(CHECKAPI)
-	$(CHECKAPI) -folder .
+	$(CHECKAPI) -folder . -config .checkapi.yaml
 
 .PHONY: kind-ready
 kind-ready:

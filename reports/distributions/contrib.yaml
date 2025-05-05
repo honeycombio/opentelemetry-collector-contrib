@@ -22,6 +22,7 @@ components:
         - awskinesis
         - awss3
         - awsxray
+        - azureblob
         - azuredataexplorer
         - azuremonitor
         - bmchelix
@@ -43,6 +44,7 @@ components:
         - loadbalancing
         - logicmonitor
         - logzio
+        - loki
         - mezmo
         - opencensus
         - opensearch
@@ -65,6 +67,7 @@ components:
         - asapclient
         - awscloudwatchmetricstreams_encoding
         - awsproxy
+        - azureauth
         - basicauth
         - bearertokenauth
         - cgroupruntime
@@ -73,6 +76,7 @@ components:
         - ecs_observer
         - ecs_task_observer
         - file_storage
+        - googlecloudlogentry_encoding
         - headers_setter
         - health_check
         - host_observer

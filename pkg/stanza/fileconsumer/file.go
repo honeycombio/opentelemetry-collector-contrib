@@ -27,7 +27,7 @@ type Manager struct {
 	wg     sync.WaitGroup
 	cancel context.CancelFunc
 
-	readerFactory reader.Factory
+	readerFactory *reader.Factory
 	fileMatcher   *matcher.Matcher
 	tracker       tracker.Tracker
 	noTracking    bool
@@ -150,7 +150,7 @@ func (m *Manager) poll(ctx context.Context) {
 		}
 	}
 	// rotate at end of every poll()
-	m.tracker.EndPoll()
+	m.tracker.EndPoll(ctx)
 }
 
 func (m *Manager) consume(ctx context.Context, paths []string) {

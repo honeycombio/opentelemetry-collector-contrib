@@ -37,6 +37,7 @@ func newRemoteWriteReceiver(settings receiver.Settings, cfg *Config, nextConsume
 		server: &http.Server{
 			ReadTimeout: 60 * time.Second,
 		},
+		rmCache: make(map[uint64]pmetric.ResourceMetrics),
 	}, nil
 }
 
@@ -44,9 +45,50 @@ type prometheusRemoteWriteReceiver struct {
 	settings     receiver.Settings
 	nextConsumer consumer.Metrics
 
-	config *Config
-	server *http.Server
-	wg     sync.WaitGroup
+	config  *Config
+	server  *http.Server
+	wg      sync.WaitGroup
+	rmCache map[uint64]pmetric.ResourceMetrics
+}
+
+// MetricIdentity contains all the components that uniquely identify a metric
+// according to the OpenTelemetry Protocol data model.
+// The definition of the metric uniqueness is based on the following document. Ref: https://opentelemetry.io/docs/specs/otel/metrics/data-model/#opentelemetry-protocol-data-model
+type MetricIdentity struct {
+	ResourceID   string
+	ScopeName    string
+	ScopeVersion string
+	MetricName   string
+	Unit         string
+	Type         writev2.Metadata_MetricType
+}
+
+// createMetricIdentity creates a MetricIdentity struct from the required components
+func createMetricIdentity(resourceID, scopeName, scopeVersion, metricName, unit string, metricType writev2.Metadata_MetricType) MetricIdentity {
+	return MetricIdentity{
+		ResourceID:   resourceID,
+		ScopeName:    scopeName,
+		ScopeVersion: scopeVersion,
+		MetricName:   metricName,
+		Unit:         unit,
+		Type:         metricType,
+	}
+}
+
+// Hash generates a unique hash for the metric identity
+func (mi MetricIdentity) Hash() uint64 {
+	const separator = "\xff"
+
+	combined := strings.Join([]string{
+		mi.ResourceID,
+		mi.ScopeName,
+		mi.ScopeVersion,
+		mi.MetricName,
+		mi.Unit,
+		fmt.Sprintf("%d", mi.Type),
+	}, separator)
+
+	return xxhash.Sum64String(combined)
 }
 
 func (prw *prometheusRemoteWriteReceiver) Start(ctx context.Context, host component.Host) error {
@@ -123,7 +165,7 @@ func (prw *prometheusRemoteWriteReceiver) handlePRW(w http.ResponseWriter, req *
 		return
 	}
 
-	_, stats, err := prw.translateV2(req.Context(), &prw2Req)
+	m, stats, err := prw.translateV2(req.Context(), &prw2Req)
 	stats.SetHeaders(w)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest) // Following instructions at https://prometheus.io/docs/specs/remote_write_spec_2_0/#invalid-samples
@@ -131,6 +173,8 @@ func (prw *prometheusRemoteWriteReceiver) handlePRW(w http.ResponseWriter, req *
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+	// TODO(@perebaj): Evaluate if we should use the obsreport here. Ref: https://github.com/open-telemetry/opentelemetry-collector-contrib/pull/38812#discussion_r2053094391
+	_ = prw.nextConsumer.ConsumeMetrics(req.Context(), m)
 }
 
 // parseProto parses the content-type header and returns the version of the remote-write protocol.
@@ -173,36 +217,55 @@ func (prw *prometheusRemoteWriteReceiver) translateV2(_ context.Context, req *wr
 		otelMetrics      = pmetric.NewMetrics()
 		labelsBuilder    = labels.NewScratchBuilder(0)
 		stats            = promremote.WriteResponseStats{}
-		// Prometheus Remote-Write can send multiple time series with the same labels in the same request.
-		// Instead of creating a whole new OTLP metric, we just append the new sample to the existing OTLP metric.
-		// This cache is called "intra" because in the future we'll have a "interRequestCache" to cache resourceAttributes
-		// between requests based on the metric "target_info".
-		intraRequestCache = make(map[uint64]pmetric.ResourceMetrics)
 		// The key is composed by: resource_hash:scope_name:scope_version:metric_name:unit:type
-		// TODO: use the appropriate hash function.
-		metricCache = make(map[string]pmetric.Metric)
+		metricCache = make(map[uint64]pmetric.Metric)
 	)
 
 	for _, ts := range req.Timeseries {
 		ls := ts.ToLabels(&labelsBuilder, req.Symbols)
 		if !ls.Has(labels.MetricName) {
-			badRequestErrors = errors.Join(badRequestErrors, fmt.Errorf("missing metric name in labels"))
+			badRequestErrors = errors.Join(badRequestErrors, errors.New("missing metric name in labels"))
 			continue
 		} else if duplicateLabel, hasDuplicate := ls.HasDuplicateLabelNames(); hasDuplicate {
 			badRequestErrors = errors.Join(badRequestErrors, fmt.Errorf("duplicate label %q in labels", duplicateLabel))
 			continue
 		}
 
+		// If the metric name is equal to target_info, we use its labels as attributes of the resource
+		// Ref: https://opentelemetry.io/docs/specs/otel/compatibility/prometheus_and_openmetrics/#resource-attributes-1
+		if ls.Get(labels.MetricName) == "target_info" {
+			var rm pmetric.ResourceMetrics
+			hashedLabels := xxhash.Sum64String(ls.Get("job") + string([]byte{'\xff'}) + ls.Get("instance"))
+
+			if existingRM, ok := prw.rmCache[hashedLabels]; ok {
+				rm = existingRM
+			} else {
+				rm = otelMetrics.ResourceMetrics().AppendEmpty()
+			}
+
+			attrs := rm.Resource().Attributes()
+			parseJobAndInstance(attrs, ls.Get("job"), ls.Get("instance"))
+
+			// Add the remaining labels as resource attributes
+			for _, l := range ls {
+				if l.Name != "job" && l.Name != "instance" && l.Name != labels.MetricName {
+					attrs.PutStr(l.Name, l.Value)
+				}
+			}
+			prw.rmCache[hashedLabels] = rm
+			continue
+		}
+
+		// For metrics other than target_info, we need to follow the standard process of creating a metric.
 		var rm pmetric.ResourceMetrics
 		hashedLabels := xxhash.Sum64String(ls.Get("job") + string([]byte{'\xff'}) + ls.Get("instance"))
-		intraCacheEntry, ok := intraRequestCache[hashedLabels]
+		existingRM, ok := prw.rmCache[hashedLabels]
 		if ok {
-			// We found the same time series in the same request, so we should append to the same OTLP metric.
-			rm = intraCacheEntry
+			rm = existingRM
 		} else {
 			rm = otelMetrics.ResourceMetrics().AppendEmpty()
 			parseJobAndInstance(rm.Resource().Attributes(), ls.Get("job"), ls.Get("instance"))
-			intraRequestCache[hashedLabels] = rm
+			prw.rmCache[hashedLabels] = rm
 		}
 
 		scopeName, scopeVersion := prw.extractScopeInfo(ls)
@@ -221,16 +284,17 @@ func (prw *prometheusRemoteWriteReceiver) translateV2(_ context.Context, req *wr
 		description := req.Symbols[ts.Metadata.HelpRef]
 
 		resourceID := identity.OfResource(rm.Resource())
-		// Temporary approach to generate the metric key.
-		// TODO: Replace this with a proper hashing function.
-		// The definition of the metric uniqueness is based on the following document. Ref: https://opentelemetry.io/docs/specs/otel/metrics/data-model/#opentelemetry-protocol-data-model
-		metricKey := fmt.Sprintf("%s:%s:%s:%s:%s:%d",
+
+		metricIdentity := createMetricIdentity(
 			resourceID.String(), // Resource identity
 			scopeName,           // Scope name
 			scopeVersion,        // Scope version
 			metricName,          // Metric name
 			unit,                // Unit
-			ts.Metadata.Type)    // Metric type
+			ts.Metadata.Type,    // Metric type
+		)
+
+		metricKey := metricIdentity.Hash()
 
 		var scope pmetric.ScopeMetrics
 		var foundScope bool

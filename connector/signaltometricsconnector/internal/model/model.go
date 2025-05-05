@@ -9,6 +9,7 @@ import (
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/pdata/pcommon"
+	"go.opentelemetry.io/collector/pdata/pmetric"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/connector/signaltometricsconnector/config"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/ottl"
@@ -16,11 +17,14 @@ import (
 
 type AttributeKeyValue struct {
 	Key          string
+	Optional     bool
 	DefaultValue pcommon.Value
 }
 
 type MetricKey struct {
 	Name        string
+	Type        pmetric.MetricType
+	Unit        string
 	Description string
 }
 
@@ -104,7 +108,6 @@ func (s *Sum[K]) fromConfig(
 
 type MetricDef[K any] struct {
 	Key                       MetricKey
-	Unit                      string
 	IncludeResourceAttributes []AttributeKeyValue
 	Attributes                []AttributeKeyValue
 	Conditions                *ottl.ConditionSequence[K]
@@ -119,8 +122,8 @@ func (md *MetricDef[K]) FromMetricInfo(
 	telemetrySettings component.TelemetrySettings,
 ) error {
 	md.Key.Name = mi.Name
+	md.Key.Unit = mi.Unit
 	md.Key.Description = mi.Description
-	md.Unit = mi.Unit
 
 	var err error
 	md.IncludeResourceAttributes, err = parseAttributeConfigs(mi.IncludeResourceAttributes)
@@ -144,18 +147,21 @@ func (md *MetricDef[K]) FromMetricInfo(
 		md.Conditions = &condSeq
 	}
 	if mi.Histogram != nil {
+		md.Key.Type = pmetric.MetricTypeHistogram
 		md.ExplicitHistogram = new(ExplicitHistogram[K])
 		if err := md.ExplicitHistogram.fromConfig(mi.Histogram, parser); err != nil {
 			return fmt.Errorf("failed to parse histogram config: %w", err)
 		}
 	}
 	if mi.ExponentialHistogram != nil {
+		md.Key.Type = pmetric.MetricTypeExponentialHistogram
 		md.ExponentialHistogram = new(ExponentialHistogram[K])
 		if err := md.ExponentialHistogram.fromConfig(mi.ExponentialHistogram, parser); err != nil {
 			return fmt.Errorf("failed to parse histogram config: %w", err)
 		}
 	}
 	if mi.Sum != nil {
+		md.Key.Type = pmetric.MetricTypeSum
 		md.Sum = new(Sum[K])
 		if err := md.Sum.fromConfig(mi.Sum, parser); err != nil {
 			return fmt.Errorf("failed to parse sum config: %w", err)
@@ -171,7 +177,7 @@ func (md *MetricDef[K]) FromMetricInfo(
 // definition.
 func (md *MetricDef[K]) FilterResourceAttributes(
 	attrs pcommon.Map,
-	collectorInfo *CollectorInstanceInfo,
+	collectorInfo CollectorInstanceInfo,
 ) pcommon.Map {
 	var filteredAttributes pcommon.Map
 	switch {
@@ -199,8 +205,7 @@ func (md *MetricDef[K]) FilterResourceAttributes(
 func (md *MetricDef[K]) FilterAttributes(attrs pcommon.Map) (pcommon.Map, bool) {
 	// Figure out if all the attributes are available, saves allocation
 	for _, filter := range md.Attributes {
-		if filter.DefaultValue.Type() != pcommon.ValueTypeEmpty {
-			// will always add an attribute
+		if filter.DefaultValue.Type() != pcommon.ValueTypeEmpty || filter.Optional {
 			continue
 		}
 		if _, ok := attrs.Get(filter.Key); !ok {
@@ -235,6 +240,7 @@ func parseAttributeConfigs(cfgs []config.Attribute) ([]AttributeKeyValue, error)
 		}
 		kvs[i] = AttributeKeyValue{
 			Key:          attr.Key,
+			Optional:     attr.Optional,
 			DefaultValue: val,
 		}
 	}

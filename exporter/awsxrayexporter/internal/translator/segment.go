@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	awsP "github.com/aws/aws-sdk-go/aws"
+	awsP "github.com/aws/aws-sdk-go-v2/aws"
 	"go.opentelemetry.io/collector/featuregate"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/ptrace"
@@ -169,7 +169,7 @@ func MakeDependencySubsegmentForLocalRootDependencySpan(span ptrace.Span, resour
 
 func MakeServiceSegmentForLocalRootDependencySpan(span ptrace.Span, resource pcommon.Resource, indexedAttrs []string, indexAllAttrs bool, logGroupNames []string, skipTimestampValidation bool, serviceSegmentID pcommon.SpanID) (*awsxray.Segment, error) {
 	// We always create a segment for the service
-	var serviceSpan ptrace.Span = ptrace.NewSpan()
+	serviceSpan := ptrace.NewSpan()
 	span.CopyTo(serviceSpan)
 
 	// Set the span id to the one internally generated

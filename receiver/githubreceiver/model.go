@@ -7,7 +7,7 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/google/go-github/v69/github"
+	"github.com/google/go-github/v71/github"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	semconv "go.opentelemetry.io/collector/semconv/v1.27.0"
 )
@@ -94,12 +94,13 @@ const (
 	AttributeCICDPipelineTaskRunSenderLogin     = "cicd.pipeline.task.run.sender.login" // GitHub's Task Sender Login
 	AttributeCICDPipelineFilePath               = "cicd.pipeline.file.path"             // GitHub's Path in workflow_run
 	AttributeCICDPipelinePreviousAttemptURLFull = "cicd.pipeline.run.previous_attempt.url.full"
-	AttributeCICDPipelineWorkerID               = "cicd.pipeline.worker.id"         // GitHub's Runner ID
-	AttributeCICDPipelineWorkerGroupID          = "cicd.pipeline.worker.group.id"   // GitHub's Runner Group ID
-	AttributeCICDPipelineWorkerName             = "cicd.pipeline.worker.name"       // GitHub's Runner Name
-	AttributeCICDPipelineWorkerGroupName        = "cicd.pipeline.worker.group.name" // GitHub's Runner Group Name
-	AttributeCICDPipelineWorkerNodeID           = "cicd.pipeline.worker.node.id"    // GitHub's Runner Node ID
-	AttributeCICDPipelineWorkerLabels           = "cicd.pipeline.worker.labels"     // GitHub's Runner Labels
+	AttributeCICDPipelineWorkerID               = "cicd.pipeline.worker.id"          // GitHub's Runner ID
+	AttributeCICDPipelineWorkerGroupID          = "cicd.pipeline.worker.group.id"    // GitHub's Runner Group ID
+	AttributeCICDPipelineWorkerName             = "cicd.pipeline.worker.name"        // GitHub's Runner Name
+	AttributeCICDPipelineWorkerGroupName        = "cicd.pipeline.worker.group.name"  // GitHub's Runner Group Name
+	AttributeCICDPipelineWorkerNodeID           = "cicd.pipeline.worker.node.id"     // GitHub's Runner Node ID
+	AttributeCICDPipelineWorkerLabels           = "cicd.pipeline.worker.labels"      // GitHub's Runner Labels
+	AttributeCICDPipelineRunQueueDuration       = "cicd.pipeline.run.queue.duration" // GitHub's Queue Duration
 
 	// The following attributes are exclusive to GitHub but not listed under
 	// Vendor Extensions within Semantic Conventions yet.

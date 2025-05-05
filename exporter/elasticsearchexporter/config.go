@@ -17,14 +17,13 @@ import (
 	"go.opentelemetry.io/collector/config/confighttp"
 	"go.opentelemetry.io/collector/config/configopaque"
 	"go.opentelemetry.io/collector/confmap"
-	"go.opentelemetry.io/collector/exporter/exporterbatcher"
 	"go.opentelemetry.io/collector/exporter/exporterhelper"
 	"go.uber.org/zap"
 )
 
 // Config defines configuration for Elastic exporter.
 type Config struct {
-	QueueSettings exporterhelper.QueueConfig `mapstructure:"sending_queue"`
+	QueueSettings exporterhelper.QueueBatchConfig `mapstructure:"sending_queue"`
 	// Endpoints holds the Elasticsearch URLs the exporter should send events to.
 	//
 	// This setting is required if CloudID is not set and if the
@@ -75,9 +74,24 @@ type Config struct {
 	Mapping                 MappingsSettings       `mapstructure:"mapping"`
 	LogstashFormat          LogstashFormatSettings `mapstructure:"logstash_format"`
 
-	// TelemetrySettings contains settings useful for testing/debugging purposes
+	// TelemetrySettings contains settings useful for testing/debugging purposes.
 	// This is experimental and may change at any time.
 	TelemetrySettings `mapstructure:"telemetry"`
+
+	// IncludeSourceOnError configures whether the bulk index responses include
+	// a part of the source document on error.
+	// Defaults to nil.
+	//
+	// This setting requires Elasticsearch 8.18+. Using it in prior versions
+	// have no effect.
+	//
+	// NOTE: The default behavior if this configuration is not set, is to
+	// discard the error reason entirely, i.e. only the error type is returned.
+	//
+	// WARNING: If set to true, the exporter may log error responses containing
+	// request payload, causing potential sensitive data to be exposed in logs.
+	// Users are expected to sanitize the responses themselves.
+	IncludeSourceOnError *bool `mapstructure:"include_source_on_error"`
 
 	// Batcher holds configuration for batching requests based on timeout
 	// and size-based thresholds.
@@ -93,7 +107,7 @@ type Config struct {
 // This is a slightly modified version of exporterbatcher.Config,
 // to enable tri-state Enabled: unset, false, true.
 type BatcherConfig struct {
-	exporterbatcher.Config `mapstructure:",squash"`
+	exporterhelper.BatcherConfig `mapstructure:",squash"`
 
 	// enabledSet tracks whether Enabled has been specified.
 	// If enabledSet is false, the exporter will perform its
@@ -112,6 +126,9 @@ func (c *BatcherConfig) Unmarshal(conf *confmap.Conf) error {
 type TelemetrySettings struct {
 	LogRequestBody  bool `mapstructure:"log_request_body"`
 	LogResponseBody bool `mapstructure:"log_response_body"`
+
+	LogFailedDocsInput          bool          `mapstructure:"log_failed_docs_input"`
+	LogFailedDocsInputRateLimit time.Duration `mapstructure:"log_failed_docs_input_rate_limit"`
 }
 
 type LogstashFormatSettings struct {
@@ -205,8 +222,12 @@ type RetrySettings struct {
 type MappingsSettings struct {
 	// Mode configures the default document mapping mode.
 	//
-	// The mode may be overridden by the client metadata key
-	// X-Elastic-Mapping-Mode, if specified.
+	// The mode may be overridden in two ways:
+	//  - by the client metadata key X-Elastic-Mapping-Mode, if specified
+	//  - by the scope attribute elastic.mapping.mode, if specified
+	//
+	// The order of precedence is:
+	//   scope attribute > client metadata > default mode.
 	Mode string `mapstructure:"mode"`
 
 	// AllowedModes controls the allowed document mapping modes
@@ -418,5 +439,17 @@ func handleDeprecatedConfig(cfg *Config, logger *zap.Logger) {
 	}
 	if cfg.TracesDynamicIndex.Enabled {
 		logger.Warn("traces_dynamic_index::enabled has been deprecated, and will be removed in a future version. It is now a no-op. Dynamic document routing is now the default. See Elasticsearch Exporter README.")
+	}
+}
+
+func handleTelemetryConfig(cfg *Config, logger *zap.Logger) {
+	if cfg.LogRequestBody {
+		logger.Warn("telemetry::log_request_body is enabled, and may expose sensitive data; It should only be used for testing or debugging.")
+	}
+	if cfg.LogResponseBody {
+		logger.Warn("telemetry::log_response_body is enabled, and may expose sensitive data; It should only be used for testing or debugging.")
+	}
+	if cfg.LogFailedDocsInput {
+		logger.Warn("telemetry::log_failed_docs_input is enabled, and may expose sensitive data; It should only be used for testing or debugging.")
 	}
 }
