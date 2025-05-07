@@ -335,11 +335,8 @@ func (s *Supervisor) Start() error {
 			return fmt.Errorf("could not find port for health check: %w", err)
 		}
 	}
-	healthCheckHost := s.config.Agent.HealthCheckHost
-	if healthCheckHost == "" {
-		healthCheckHost = "localhost"
-	}
-	s.agentHealthCheckEndpoint = fmt.Sprintf("%v:%d", healthCheckHost, healthCheckPort)
+
+	s.agentHealthCheckEndpoint = fmt.Sprintf("localhost:%d", healthCheckPort)
 
 	s.telemetrySettings.Logger.Info("Supervisor starting",
 		zap.String("id", s.persistentState.InstanceID.String()))
