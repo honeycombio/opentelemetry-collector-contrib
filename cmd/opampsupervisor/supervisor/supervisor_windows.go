@@ -77,7 +77,8 @@ func (ws *windowsService) start(elog *eventlog.Log) error {
 		return fmt.Errorf("load config: %w", err)
 	}
 
-	sup, err := NewSupervisor(context.Background(), logger, cfg)
+	// Pass config file path to supervisor for watching
+	sup, err := NewSupervisor(context.Background(), logger, *configFlag, cfg)
 	if err != nil {
 		return fmt.Errorf("new supervisor: %w", err)
 	}

@@ -39,7 +39,9 @@ func runInteractive() error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	supervisor, err := supervisor.NewSupervisor(ctx, logger.Named("supervisor"), cfg)
+	// Pass config file path to supervisor for watching
+	// If no config file specified, supervisor will run without config reload capability
+	supervisor, err := supervisor.NewSupervisor(ctx, logger.Named("supervisor"), *configFlag, cfg)
 	if err != nil {
 		return fmt.Errorf("failed to create supervisor: %w", err)
 	}

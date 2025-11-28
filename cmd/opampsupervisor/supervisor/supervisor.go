@@ -16,6 +16,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"sort"
 	"strings"
@@ -190,11 +191,26 @@ type Supervisor struct {
 	// heartbeatInterval is the interval the OpAMP client is configured to send heartbeats.
 	// Default is 30 seconds but can be overridden by the OpAMP server with an OpAMPConnectionSettings message.
 	heartbeatIntervalSeconds uint64
+
+	// Config watching
+	configWatcher *configWatcher
+	configFile    string // Store original config file path for watching
 }
 
-func NewSupervisor(ctx context.Context, logger *zap.Logger, cfg config.Supervisor) (*Supervisor, error) {
+// NewSupervisor creates a new Supervisor instance.
+//
+// Unlike the main collector which uses a ConfigProvider pattern, the supervisor takes both
+// a pre-loaded config and an optional config file path. This design is intentional because:
+// 1. The logger must be created before the supervisor (using cfg.Telemetry.Logs)
+// 2. The logger is needed immediately during supervisor construction
+// 3. The config file path enables optional configuration reloading after startup
+//
+// If configFile is empty, the supervisor runs without config reload capability.
+// If configFile is provided, changes to the telemetry section will be automatically reloaded.
+func NewSupervisor(ctx context.Context, logger *zap.Logger, configFile string, cfg config.Supervisor) (*Supervisor, error) {
 	s := &Supervisor{
 		pidProvider:                    defaultPIDProvider{},
+		configFile:                     configFile,
 		hasNewConfig:                   make(chan struct{}, 1),
 		agentConfigOwnTelemetrySection: &atomic.Value{},
 		cfgState:                       &atomic.Value{},
@@ -329,6 +345,28 @@ func (s *Supervisor) Start(ctx context.Context) error {
 	var err error
 
 	s.runCtx, s.runCtxCancel = context.WithCancel(ctx)
+
+	// Start config file watcher if config file path is available
+	if s.configFile != "" {
+		watcher, err := newConfigWatcher(
+			s.configFile,
+			s.telemetrySettings.Logger,
+			s.onConfigChange,
+		)
+		if err != nil {
+			s.telemetrySettings.Logger.Warn("Failed to create config watcher, config reload disabled", zap.Error(err))
+			// Don't fail startup, just log and continue without watching
+		} else {
+			s.configWatcher = watcher
+
+			// Start watcher in background goroutine
+			go watcher.Start(s.runCtx)
+			s.telemetrySettings.Logger.Info("Config file watcher started",
+				zap.String("file", s.configFile))
+		}
+	} else {
+		s.telemetrySettings.Logger.Debug("No config file path provided, config reload disabled")
+	}
 
 	if err = s.startHealthCheckServer(); err != nil {
 		return fmt.Errorf("failed to start health check server: %w", err)
@@ -1765,6 +1803,14 @@ func (s *Supervisor) Shutdown() {
 	defer s.runCtxCancel()
 
 	s.telemetrySettings.Logger.Debug("Supervisor shutting down...")
+
+	// Stop config watcher gracefully
+	if s.configWatcher != nil {
+		if err := s.configWatcher.Stop(); err != nil {
+			s.telemetrySettings.Logger.Error("Failed to stop config watcher", zap.Error(err))
+		}
+	}
+
 	close(s.doneChan)
 
 	// Shutdown in order from producer to consumer (agent -> customMessageForwarder -> local OpAMP server -> client to remote OpAMP server).
@@ -1821,6 +1867,12 @@ func (s *Supervisor) Shutdown() {
 }
 
 func (s *Supervisor) shutdownTelemetry() error {
+	return s.shutdownTelemetryProviders()
+}
+
+// shutdownTelemetryProviders shuts down the telemetry providers (meter, tracer, logger)
+// This method is used both during shutdown and during telemetry reload
+func (s *Supervisor) shutdownTelemetryProviders() error {
 	ctx, cancel := context.WithTimeout(s.runCtx, 5*time.Second)
 	defer cancel()
 	// The metric.MeterProvider and trace.TracerProvider interfaces do not have a Shutdown method.
@@ -1850,6 +1902,39 @@ func (s *Supervisor) shutdownTelemetry() error {
 	}
 
 	return err
+}
+
+// reloadTelemetrySettings reloads the supervisor's telemetry settings following
+// the collector's shutdown & reload pattern.
+func (s *Supervisor) reloadTelemetrySettings(ctx context.Context, newTelemetryCfg config.Telemetry) error {
+	s.telemetrySettings.Logger.Warn("Telemetry config updated, reloading telemetry")
+
+	// Step 1: Shutdown existing telemetry providers
+	if err := s.shutdownTelemetryProviders(); err != nil {
+		return fmt.Errorf("failed to shutdown existing telemetry providers: %w", err)
+	}
+
+	// Step 2: Initialize new telemetry settings, reusing the existing logger
+	newSettings, err := initTelemetrySettings(ctx, s.telemetrySettings.Logger, newTelemetryCfg)
+	if err != nil {
+		return fmt.Errorf("failed to initialize new telemetry settings: %w", err)
+	}
+
+	// Step 3: Replace telemetry settings
+	// Keep the old logger to avoid disrupting 115+ log statements
+	oldLogger := s.telemetrySettings.Logger
+	s.telemetrySettings = newSettings
+	s.telemetrySettings.Logger = oldLogger
+
+	// Step 4: Recreate metrics with new meter provider
+	newMetrics, err := supervisorTelemetry.NewMetrics(s.telemetrySettings.MeterProvider)
+	if err != nil {
+		return fmt.Errorf("failed to create new metrics: %w", err)
+	}
+	s.metrics = newMetrics
+
+	s.telemetrySettings.Logger.Info("Telemetry reloaded successfully")
+	return nil
 }
 
 func (s *Supervisor) saveLastReceivedConfig(config *protobufs.AgentRemoteConfig) error {
@@ -2056,6 +2141,46 @@ func (s *Supervisor) processAgentIdentificationMessage(msg *protobufs.AgentIdent
 	}
 
 	return configChanged
+}
+
+// onConfigChange handles configuration file changes and selectively reloads components
+func (s *Supervisor) onConfigChange(newCfg config.Supervisor) error {
+	s.telemetrySettings.Logger.Info("Processing configuration change")
+
+	// Validate new config first
+	if err := newCfg.Validate(); err != nil {
+		return fmt.Errorf("new config validation failed: %w", err)
+	}
+
+	// Check what changed and handle accordingly
+	telemetryChanged := !telemetryConfigEqual(s.config.Telemetry, newCfg.Telemetry)
+
+	if telemetryChanged {
+		s.telemetrySettings.Logger.Info("Telemetry configuration changed, initiating reload")
+
+		if err := s.reloadTelemetrySettings(s.runCtx, newCfg.Telemetry); err != nil {
+			return fmt.Errorf("failed to reload telemetry: %w", err)
+		}
+
+		// Update stored config after successful reload
+		s.config.Telemetry = newCfg.Telemetry
+	} else {
+		s.telemetrySettings.Logger.Debug("Telemetry configuration unchanged, no reload needed")
+	}
+
+	// TODO: Handle other config section changes in future PRs
+	// - Agent config changes -> restart agent
+	// - Server config changes -> reconnect OpAMP
+	// - Capability changes -> update OpAMP client
+
+	return nil
+}
+
+// telemetryConfigEqual compares two telemetry configurations for equality
+func telemetryConfigEqual(a, b config.Telemetry) bool {
+	// Use reflect.DeepEqual for comprehensive comparison
+	// This is safe for config structs and catches all field changes
+	return reflect.DeepEqual(a, b)
 }
 
 func (s *Supervisor) persistentStateFilePath() string {

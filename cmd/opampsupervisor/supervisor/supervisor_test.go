@@ -148,14 +148,14 @@ func newNopTelemetrySettings() telemetrySettings {
 
 func Test_NewSupervisor(t *testing.T) {
 	cfg := setupSupervisorConfig(t, configTemplate)
-	supervisor, err := NewSupervisor(t.Context(), zap.L(), cfg)
+	supervisor, err := NewSupervisor(t.Context(), zap.L(), "", cfg)
 	require.NoError(t, err)
 	require.NotNil(t, supervisor)
 }
 
 func Test_NewSupervisorWithTelemetrySettings(t *testing.T) {
 	cfg := setupSupervisorConfig(t, configTemplateWithTelemetrySettings)
-	supervisor, err := NewSupervisor(t.Context(), zap.L(), cfg)
+	supervisor, err := NewSupervisor(t.Context(), zap.L(), "", cfg)
 	require.NoError(t, err)
 	require.NotNil(t, supervisor)
 	require.NotEmpty(t, supervisor.telemetrySettings)
@@ -178,7 +178,7 @@ func Test_NewSupervisorFailedStorageCreation(t *testing.T) {
 	dir := filepath.Dir(cfg.Storage.Directory)
 	require.NoError(t, os.Chmod(dir, 0o500))
 
-	supervisor, err := NewSupervisor(t.Context(), zap.L(), cfg)
+	supervisor, err := NewSupervisor(t.Context(), zap.L(), "", cfg)
 	require.Error(t, err)
 	require.ErrorContains(t, err, "error creating storage dir")
 	require.Nil(t, supervisor)
@@ -1966,7 +1966,7 @@ telemetry:
 `
 
 	cfg := setupSupervisorConfig(t, template)
-	supervisor, err := NewSupervisor(t.Context(), zap.NewNop(), cfg)
+	supervisor, err := NewSupervisor(t.Context(), zap.NewNop(), "", cfg)
 	require.NoError(t, err)
 
 	path := filepath.Join(t.TempDir(), "output.txt")
@@ -2223,7 +2223,7 @@ func TestSupervisor_HealthCheckServer(t *testing.T) {
 
 func TestRemoteConfigConcurrentAccess(t *testing.T) {
 	cfg := setupSupervisorConfig(t, configTemplate)
-	s, err := NewSupervisor(t.Context(), nil, cfg)
+	s, err := NewSupervisor(t.Context(), nil, "", cfg)
 	require.NoError(t, err)
 
 	config1 := &protobufs.AgentRemoteConfig{
