@@ -1,5 +1,5 @@
 server:
-  endpoint: wss://127.0.0.1:4320/v1/opamp
+  endpoint: ws://0.0.0.0:4320/v1/opamp
   tls:
     # Disable verification to test locally.
     # Don't do this in production.
@@ -14,9 +14,28 @@ capabilities:
   reports_health: true
   accepts_remote_config: true
   reports_remote_config: true
+  accepts_opamp_connection_settings: true
 
 agent:
-  executable: ../../bin/otelcontribcol_darwin_arm64
+  executable: /Users/tylerhelmuth/projects/honeycomb/supervised-collector/supervised-collector/supervised-collector
+  passthrough_logs: true
+  description:
+    identifying_attributes:
+      service.name: primary-collector
+      service.namespace: htp.collector
+
+
+telemetry:
+    resource:
+      service.name: opamp-supervisor
+    logs:
+      level: info
+      processors:
+        - batch:
+            exporter:
+              otlp:
+                protocol: http/protobuf
+                endpoint: https://api.honeycomb.io:443
 
 storage:
   directory: .

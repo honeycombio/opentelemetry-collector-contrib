@@ -120,6 +120,14 @@ type Supervisor struct {
 	// Supervisor's own config.
 	config config.Supervisor
 
+	// Channel to signal telemetry configuration changes that require supervisor recreation
+	configChangeChan chan config.Supervisor
+
+	// Current telemetry connection settings for comparison
+	currentMetricsSettings *protobufs.TelemetryConnectionSettings
+	currentTracesSettings  *protobufs.TelemetryConnectionSettings
+	currentLogsSettings    *protobufs.TelemetryConnectionSettings
+
 	agentDescription    *atomic.Value
 	availableComponents *atomic.Value
 
@@ -209,6 +217,7 @@ func NewSupervisor(ctx context.Context, logger *zap.Logger, cfg config.Superviso
 		agentReadyChan:                 make(chan struct{}, 1),
 		metrics:                        &supervisorTelemetry.Metrics{},
 		heartbeatIntervalSeconds:       30,
+		configChangeChan:               make(chan config.Supervisor, 1),
 	}
 
 	s.runCtx, s.runCtxCancel = context.WithCancel(ctx)
@@ -1761,11 +1770,18 @@ func (s *Supervisor) stopAgentApplyConfig() {
 	}
 }
 
+// Watch returns a channel that emits telemetry configurations when the supervisor
+// needs to be recreated due to telemetry configuration changes.
+func (s *Supervisor) Watch() <-chan config.Supervisor {
+	return s.configChangeChan
+}
+
 func (s *Supervisor) Shutdown() {
 	defer s.runCtxCancel()
 
 	s.telemetrySettings.Logger.Debug("Supervisor shutting down...")
 	close(s.doneChan)
+	close(s.configChangeChan)
 
 	// Shutdown in order from producer to consumer (agent -> customMessageForwarder -> local OpAMP server -> client to remote OpAMP server).
 	s.agentWG.Wait()
@@ -1914,6 +1930,18 @@ func (s *Supervisor) SetHealth(componentHealth *protobufs.ComponentHealth) error
 func (s *Supervisor) onMessage(ctx context.Context, msg *types.MessageData) {
 	ctx, span := s.getTracer().Start(ctx, "onMessage")
 	defer span.End()
+
+	if s.telemetrySettingsChanged(msg.OwnTracesConnSettings, msg.OwnMetricsConnSettings, msg.OwnLogsConnSettings) {
+		s.telemetrySettings.Logger.Info("Telemetry connection settings change requires supervisor recreation")
+		s.config.Telemetry = s.updateTelemetryConfigWithConnSettings(
+			msg.OwnTracesConnSettings,
+			msg.OwnMetricsConnSettings,
+			msg.OwnLogsConnSettings,
+		)
+		s.configChangeChan <- s.config
+		return
+	}
+
 	configChanged := false
 
 	if msg.AgentIdentification != nil {
@@ -2145,4 +2173,130 @@ func configMergeFunc(src, dest map[string]any) error {
 	}
 
 	return nil
+}
+
+func (s *Supervisor) configHeadersChanged(configHeaders []telemetryconfig.NameStringValuePair, incomingHeaders *protobufs.Headers) bool {
+	if incomingHeaders == nil {
+		return false
+	}
+
+	incomingHeadersList := incomingHeaders.GetHeaders()
+	if len(configHeaders) != len(incomingHeadersList) {
+		return true
+	}
+
+	for _, incomingHeader := range incomingHeadersList {
+		if !slices.ContainsFunc(configHeaders, func(p telemetryconfig.NameStringValuePair) bool {
+			return p.Name == incomingHeader.Key && *p.Value == incomingHeader.Value
+		}) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (s *Supervisor) tracesSettingsChanged(incoming *protobufs.TelemetryConnectionSettings) bool {
+	// Honeycomb specific logic
+	// Only change supervisor settings if they are the ones we expect
+	if incoming == nil || len(s.config.Telemetry.Traces.Processors) != 1 || s.config.Telemetry.Traces.Processors[0].Batch == nil || s.config.Telemetry.Traces.Processors[0].Batch.Exporter.OTLP == nil {
+		return false
+	}
+
+	if incoming.DestinationEndpoint != "" && (s.config.Telemetry.Traces.Processors[0].Batch.Exporter.OTLP.Endpoint == nil || incoming.DestinationEndpoint != *s.config.Telemetry.Traces.Processors[0].Batch.Exporter.OTLP.Endpoint) {
+		return true
+	}
+
+	return s.configHeadersChanged(s.config.Telemetry.Traces.Processors[0].Batch.Exporter.OTLP.Headers, incoming.GetHeaders())
+}
+
+func (s *Supervisor) metricsSettingsChanged(incoming *protobufs.TelemetryConnectionSettings) bool {
+	// Honeycomb specific logic
+	// Only change supervisor settings if they are the ones we expect
+	if incoming == nil || len(s.config.Telemetry.Metrics.Readers) != 1 || s.config.Telemetry.Metrics.Readers[0].Periodic == nil || s.config.Telemetry.Metrics.Readers[0].Periodic.Exporter.OTLP == nil {
+		return false
+	}
+
+	if incoming.DestinationEndpoint != "" && (s.config.Telemetry.Metrics.Readers[0].Periodic.Exporter.OTLP.Endpoint == nil || incoming.DestinationEndpoint != *s.config.Telemetry.Metrics.Readers[0].Periodic.Exporter.OTLP.Endpoint) {
+		return true
+	}
+
+	return s.configHeadersChanged(s.config.Telemetry.Metrics.Readers[0].Periodic.Exporter.OTLP.Headers, incoming.GetHeaders())
+}
+
+func (s *Supervisor) logsSettingsChanged(incoming *protobufs.TelemetryConnectionSettings) bool {
+	// Honeycomb specific logic
+	// Only change supervisor settings if they are the ones we expect
+	if incoming == nil || len(s.config.Telemetry.Logs.Processors) != 1 || s.config.Telemetry.Logs.Processors[0].Batch == nil || s.config.Telemetry.Logs.Processors[0].Batch.Exporter.OTLP == nil {
+		return false
+	}
+
+	if incoming.DestinationEndpoint != "" && (s.config.Telemetry.Logs.Processors[0].Batch.Exporter.OTLP.Endpoint == nil || incoming.DestinationEndpoint != *s.config.Telemetry.Logs.Processors[0].Batch.Exporter.OTLP.Endpoint) {
+		return true
+	}
+
+	return s.configHeadersChanged(s.config.Telemetry.Logs.Processors[0].Batch.Exporter.OTLP.Headers, incoming.GetHeaders())
+}
+
+func (s *Supervisor) telemetrySettingsChanged(traces, metrics, logs *protobufs.TelemetryConnectionSettings) bool {
+	return s.tracesSettingsChanged(traces) ||
+		s.metricsSettingsChanged(metrics) ||
+		s.logsSettingsChanged(logs)
+}
+
+func (s *Supervisor) updateTelemetryConfigWithConnSettings(traces, metrics, logs *protobufs.TelemetryConnectionSettings) config.Telemetry {
+	updatedConfig := s.config.Telemetry
+
+	// Update traces configuration if provided
+	if traces != nil {
+		for _, processor := range updatedConfig.Traces.Processors {
+			if processor.Batch != nil && processor.Batch.Exporter.OTLP != nil {
+				if traces.DestinationEndpoint != "" {
+					processor.Batch.Exporter.OTLP.Endpoint = &traces.DestinationEndpoint
+				}
+				if traces.Headers != nil {
+					processor.Batch.Exporter.OTLP.Headers = convertHeaders(traces.Headers.Headers)
+				}
+			}
+		}
+	}
+
+	if metrics != nil {
+		for _, reader := range updatedConfig.Metrics.Readers {
+			if reader.Periodic != nil && reader.Periodic.Exporter.OTLP != nil {
+				if metrics.DestinationEndpoint != "" {
+					reader.Periodic.Exporter.OTLP.Endpoint = &metrics.DestinationEndpoint
+				}
+				if metrics.Headers != nil {
+					reader.Periodic.Exporter.OTLP.Headers = convertHeaders(metrics.Headers.Headers)
+				}
+			}
+		}
+	}
+
+	if logs != nil {
+		for _, processor := range updatedConfig.Logs.Processors {
+			if processor.Batch != nil && processor.Batch.Exporter.OTLP != nil {
+				if logs.DestinationEndpoint != "" {
+					processor.Batch.Exporter.OTLP.Endpoint = &logs.DestinationEndpoint
+				}
+				if logs.Headers != nil {
+					processor.Batch.Exporter.OTLP.Headers = convertHeaders(logs.Headers.Headers)
+				}
+			}
+		}
+	}
+
+	return updatedConfig
+}
+
+func convertHeaders(headers []*protobufs.Header) []telemetryconfig.NameStringValuePair {
+	result := make([]telemetryconfig.NameStringValuePair, len(headers))
+	for i, header := range headers {
+		result[i] = telemetryconfig.NameStringValuePair{
+			Name:  header.Key,
+			Value: &header.Value,
+		}
+	}
+	return result
 }

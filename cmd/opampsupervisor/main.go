@@ -36,15 +36,14 @@ func runInteractive() error {
 		return fmt.Errorf("failed to create logger: %w", err)
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	supervisor, err := supervisor.NewSupervisor(ctx, logger.Named("supervisor"), cfg)
+	supervisorWrapper, err := supervisor.NewSupervisorWrapper(logger.Named("supervisor"), cfg)
 	if err != nil {
 		return fmt.Errorf("failed to create supervisor: %w", err)
 	}
 
-	err = supervisor.Start(ctx)
+	ctx, cancel := context.WithCancel(context.Background())
+
+	err = supervisorWrapper.Run(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to start supervisor: %w", err)
 	}
@@ -52,7 +51,11 @@ func runInteractive() error {
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, os.Interrupt)
 	<-interrupt
-	supervisor.Shutdown()
+	cancel()
+	err = supervisorWrapper.Shutdown(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to shutdown supervisor gracefully: %w", err)
+	}
 
 	return nil
 }
